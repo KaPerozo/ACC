@@ -41,7 +41,7 @@ Test <- setClass("Test",
                      isUpdate = TRUE), 
  		validity  = function(object){ 			 			
       auxModelos <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
-                               'model'  = c("noModel", "PCM", "RSM", "GRM", "MRD", "2PL", "1PL", "3PL"))		
+                               'model'  = c("noModel", "PCM", "RSM", "GRM", "MRD", "1PL", "2PL", "3PL"))		
  			if(!object@codMod %in% auxModelos[, "codMod"]){
  				cat("No existe el codigo del modelo: ", object@codMod)
  				print(auxModelos)
