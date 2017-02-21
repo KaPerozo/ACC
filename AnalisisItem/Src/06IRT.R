@@ -68,9 +68,9 @@ IRT <- function(test, paramExp = NULL){
                        AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE, 
                        mCentrar = NULL, sdCentrar = NULL)
   if ("verSalida" %in% names(paramExp)){
-    auxVerSalida <- paramDefault$verSalida
+    auxVerSalida <- paramDefault$sdCentrar
   } else {
-    auxVerSalida <- 1
+    sdCentrar <- 1
   }
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
@@ -216,8 +216,8 @@ setMethod("codeAnalysis", "IRT",
 
   if (!is.null(object@param$sdCentrar)) {
     cat("Centrando de acuerdo a parametros sdCentrar:", 
-       object@param$sdAbilParam, "\n")
-    sdAbilParam <- object@param$sdAbilParam
+       object@param$sdCentrar, "\n")
+    sdAbilParam <- object@param$sdCentrar
   }
 
   # # create list to save results
