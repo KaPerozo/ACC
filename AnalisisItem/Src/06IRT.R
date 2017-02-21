@@ -68,9 +68,9 @@ IRT <- function(test, paramExp = NULL){
                        AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE, 
                        mCentrar = NULL, sdCentrar = NULL)
   if ("verSalida" %in% names(paramExp)){
-    auxVerSalida <- paramDefault$sdCentrar
+    auxVerSalida <- paramDefault$verSalida
   } else {
-    sdCentrar <- 1
+    auxVerSalida <- 1
   }
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
