@@ -334,7 +334,7 @@ setMethod("codeAnalysis", "IRT",
         itemParameters <- try(ReadBlParFile(itemDiffFile, outPath))
         
         # # Reading TCT results Original
-        itemTCTFile  <- paste("salidas/", indexData, "_ori.TCT", sep = "")
+        itemTCTFile  <- paste("salidas/", indexData, "_0.TCT", sep = "")
         tctParam_ORI <- try(ReadBlTCTFile(itemTCTFile, outPath))
 
         # # Reading TCT results Final

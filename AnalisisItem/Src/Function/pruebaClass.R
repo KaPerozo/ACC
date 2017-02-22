@@ -792,8 +792,16 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
        # # Verificando archivos
        fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
        fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
+
+       # # Encontrando archivos en comun
+       liDestino <- list.files(file.path(folder), recursive = TRUE)
+       liOrigen  <- list.files(outPath, recursive = TRUE)
+
+       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)
+
+       # # Copiando otros archivos
        file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
-       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)        
+       
      }
       
      # # Creando Lista 

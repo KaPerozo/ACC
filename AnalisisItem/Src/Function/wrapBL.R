@@ -466,13 +466,13 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       if (!is.null(isBad)) {
         isElim  <- any(isBad %in% indPosi[["pos"]])
         if (isElim) {
-          indPosi <- indPosi[-isBad, ]
-          indPosi$pos <- 1:nrow(indPosi)
+          posElim <- (1:nrow(indPosi))[indPosi[["pos"]] %in% isBad]
+          indPosi <- indPosi[-posElim, ]
         }
       }
+      indPosi[, "posAux"] <- 1:nrow(indPosi)
       prmDAT <- subset(indPosi, !is.na(dif), 
-                      select = c("pos", "disc", "dif", "azar"))
-
+                      select = c("posAux", "disc", "dif", "azar"))
       # # format and run
       cols   <- c("dif", "disc", "azar")
       for (jj in cols){
@@ -665,21 +665,21 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   iiCor <- 1
   repeat{
     system("WinXP-RUNBILOG.bat")
-    if (iiCor == 1){
-      file.copy(tctFileName, gsub("\\.TCT", "_ori.TCT", tctFileName))
-    }
+    file.copy(tctFileName, gsub("\\.TCT", paste0("_", iiCor - 1, ".TCT"), tctFileName))
 
     # # Identificando items malos
     auxTCT <- ReadBlTCTFile(tctFileName, ".")
 
     if (iiCor > 1) { # Despues de eliminar negativos
       auxTCT <- auxTCT[order(auxTCT[, "BISERIAL"]), ]
-      isBad  <- auxTCT[, "BISERIAL"] < thrCorr
-      isBad <- which(itemIds %in% auxTCT[isBad, "item"][1])
+      posBad  <- auxTCT[, "BISERIAL"] < thrCorr
+      isBad <- which(itemIds %in% auxTCT[posBad, "item"][1])
     } else { # Primera corrida eliminar negativos
-      isBad  <- auxTCT[, "BISERIAL"] < 0
-      isBad  <- which(itemIds %in% auxTCT[isBad, "item"])
+      posBad  <- auxTCT[, "BISERIAL"] <= 0
+      isBad  <- which(itemIds %in% auxTCT[posBad, "item"])
     }   
+   
+    # # Encontrando posiciones
     auxBlm <- readLines(commandFile)
     linea1 <- grep(pattern = "INUmber", auxBlm)
     linea2 <- min(grep(pattern = ">(CALIB|GROUP)", auxBlm))
@@ -709,12 +709,10 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     if (!is.null(datAnclas) & length(isBad) > 0) {
       # # Ajustando campo Fix
       cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
-      #print(indPosi$Fix)
-      #print(str(indPosi))
       cat("Eliminando items ...... \n")
       cat(isBad, "\n")
-      #print(indPosi$Fix[-isBad])
-      printFix(vecFix = indPosi$Fix[-isBad], commandFile)
+      posFix <- (1:nrow(indPosi))[indPosi[["pos"]] %in% isBad]
+      printFix(vecFix = indPosi$Fix[-posFix], commandFile)
       cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
           file = commandFile, append = TRUE)
       #indPosi$Fix <- indPosi$Fix[-isBad]
@@ -725,9 +723,16 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       cat(auxBlm, sep = "\n", file = commandFile)  
     }
 
+    # # Verificando de nuevo TCT
+    if (iiCor == 1) {
+      file.remove(scoreFileName)
+      system("WinXP-RUNBILOG.bat")
+      auxTCT <- ReadBlTCTFile(tctFileName, ".")
+    }
+    
     # # revisar SCO 
     sizeSCO <- file.info(scoreFileName)$size
-    if(sizeSCO >= 0 & all(auxTCT[, "BISERIAL"] > 0)){
+    if(sizeSCO > 0 & all(auxTCT[, "BISERIAL"] > 0)){
       break
     }
     iiCor <- iiCor + 1
