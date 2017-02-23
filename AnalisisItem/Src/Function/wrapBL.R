@@ -54,7 +54,7 @@ readDIFF <- function(fileName, filePath = "./"){
 }
 
 
- readPH2CHI <- function(fileName, filePath = "./"){
+readPH2CHI <- function(fileName, filePath = "./"){
   # # Reads the item parameters from Bilog
   # #
   # # Arg:
@@ -73,10 +73,11 @@ readDIFF <- function(fileName, filePath = "./"){
   tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
   tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
   tab <- tab[, data.table::tstrsplit(Original, "|", fixed=TRUE)]
-  tab <- tab[, list('item'  =  gsub("I", "", V1), 
+  tab <- tab[, list('item'  =  gsub("^(I)(.*)", "\\2", V1), 
                     'p_val_chi2' = as.numeric(gsub("\\(|\\)", "", V13)), 
                     'chi2'       = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\1", V7)), 
                     'gl_chi2'    = as.numeric(gsub("(\\d.+)\\s+(\\d.+)", "\\2", V7)))]
+  tab[1, 'item'] <- tab[1, list('item'   =  gsub("^(I)(.*)", "\\2", item))]
   tab <- tab[, item := paste0("I", gsub("\\s", "", item))]
   tab <- subset(tab, item != "I")
   return(tab)
