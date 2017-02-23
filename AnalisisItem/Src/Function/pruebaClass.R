@@ -492,20 +492,31 @@ setMethod("filterAnalysis", "Analysis",
           })
 
 # # Save result of Analysis
+
+joinListResult <- function(listResults, dataRead, outRdata, flagActualizar = TRUE) {
+    auxResult <- listResults
+    auxDataRe <- dataRead
+    load(file = outRdata)
+    for (resul in names(auxResult)){
+      if (flagActualizar) {
+        listResults[[resul]] <- auxResult[[resul]]
+      } else {
+        if (!resul %in% names(listResults)) {
+          listResults[[resul]] <- auxResult[[resul]]
+        }
+      }
+    }     
+    dataRead <- unique(rbind(dataRead, auxDataRe))
+    save(dataRead, listResults, file = outRdata)
+}
+
 setGeneric(name = "saveResult", def = function(object, ...){standardGeneric("saveResult")})
 setMethod("saveResult", "Analysis", function(object, listResults, srcPath = "."){
      dataRead <- data.frame('nomTest' = object@test@nomTest, 
                             'codSalida' = names(listResults))
      outRdata <- file.path(srcPath, object@outFile$pathRdata)
      if (file.exists(outRdata)){
-        auxResult <- listResults
-        auxDataRe <- dataRead
-        load(file = outRdata)
-        for (resul in names(auxResult)){
-          listResults[[resul]] <- auxResult[[resul]]
-        }     
-        dataRead <- unique(rbind(dataRead, auxDataRe))
-        save(dataRead, listResults, file = outRdata)
+        joinListResult(listResults, dataRead, outRdata)
      }
      save(dataRead, listResults, file = outRdata)
 })
@@ -789,15 +800,30 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
        for (out in foldOut){
          dir.create(out, recursive = TRUE, showWarnings = FALSE)      
        }
-       # # Verificando archivos
-       fileOut <- file.path(folder, "Output", list.files(outPath, recursive = TRUE))
-       fileDoc <- file.path(folder, "Doc", list.files(docPath, recursive = TRUE))
-
+       
+       require(tools)
        # # Encontrando archivos en comun
-       liDestino <- list.files(file.path(folder), recursive = TRUE)
+       liDestino <- list.files(file.path(folder, "Output"), recursive = TRUE)
        liOrigen  <- list.files(outPath, recursive = TRUE)
+       liInterse <- intersect(liDestino, liOrigen)
 
-       file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       if (length(liInterse) ==  0) {
+         file.copy(outPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       } else {
+         # # Listando Rdatas paraUnir
+         liInterse <- liInterse[toupper(file_ext(liInterse)) == "RDATA"]
+         liInterse <- grep("((outList)|(conteoFiltros))", liInterse, value = TRUE)
+         for (file in liInterse){
+           load(file.path(outPath, file))
+           fileAux <- file.path(folder, "Output", file)
+           joinListResult(listResults, dataRead, fileAux, flagActualizar)
+           rm(listResults, dataRead); gc(reset = TRUE)
+         }
+         # # Copiando el resto de archivos
+         liUnion <- setdiff(union(liDestino, liOrigen), liInterse)
+         file.copy(file.path(outPath, liUnion), file.path(folder, "Output", fifolder), 
+                   overwrite = flagActualizar)
+       }
 
        # # Copiando otros archivos
        file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
