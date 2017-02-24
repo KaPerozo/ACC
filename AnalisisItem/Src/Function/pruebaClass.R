@@ -821,7 +821,7 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
          }
          # # Copiando el resto de archivos
          liUnion <- setdiff(union(liDestino, liOrigen), liInterse)
-         file.copy(file.path(outPath, liUnion), file.path(folder, "Output", fifolder), 
+         file.copy(file.path(outPath, liUnion), file.path(folder, "Output", liUnion), 
                    overwrite = flagActualizar)
        }
 
