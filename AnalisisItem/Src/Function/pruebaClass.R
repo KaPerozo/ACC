@@ -821,8 +821,12 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
          }
          # # Copiando el resto de archivos
          liUnion <- setdiff(union(liDestino, liOrigen), liInterse)
+         dirCrear <- gsub("(.+)(/pba.+/)(.+)", "\\1\\2", grep("06IRT", file.path(folder, "Output", liUnion), value = TRUE))
+         dirCrear <- unique(dirCrear[!grepl(".xlsx", dirCrear)])
+         dirCrear <- dirCrear[!dir.exists(dirCrear)]
+         lapply(dirCrear, function(x){dir.create(x, recursive = TRUE)})
          file.copy(file.path(outPath, liUnion), file.path(folder, "Output", liUnion), 
-                   overwrite = flagActualizar)
+                   overwrite = flagActualizar, recursive = TRUE)
        }
 
        # # Copiando otros archivos
