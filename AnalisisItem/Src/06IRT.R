@@ -397,7 +397,7 @@ setMethod("codeAnalysis", "IRT",
         itemParameters[, "dif_NEW"]      <- itemParameters[, "dif"]
         itemParameters[, "eedif_NEW"]    <- itemParameters[, "eedif"]
 
-        if (all(c("espMean", "espSd") %in% names(object@param)) & auxCodModel != "00"){
+        if (all(c("espMean", "espSd") %in% names(object@param))){
           personAbilities <- funRescal(personAbilities, "ABILITY_NEW", meanHab = meanAbil, 
                                        sdHab = sdAbil, meanFin = object@param$espMean, 
                                        sdFin =  object@param$espSd, flagEE = FALSE)
