@@ -825,8 +825,10 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
          dirCrear <- unique(dirCrear[!grepl(".xlsx", dirCrear)])
          dirCrear <- dirCrear[!dir.exists(dirCrear)]
          lapply(dirCrear, function(x){dir.create(x, recursive = TRUE)})
-         file.copy(file.path(outPath, liUnion), file.path(folder, "Output", liUnion), 
-                   overwrite = flagActualizar, recursive = TRUE)
+         for (fileAux in liUnion){
+           file.copy(file.path(outPath, fileAux), file.path(folder, "Output", fileAux), 
+                     overwrite = flagActualizar, recursive = TRUE)
+         }
        }
 
        # # Copiando otros archivos
