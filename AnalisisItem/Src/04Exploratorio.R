@@ -101,6 +101,7 @@ function(object){
     require(semPlot)  # # 0.2-8
     require(GPArotation)
     require(xlsx)
+    require(sfsmisc)
     require(pcaPA)
     require(reshape)
     require(RColorBrewer) # # 1.0-5
