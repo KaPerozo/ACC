@@ -213,7 +213,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
 
   removeCol <- NULL
   
-  if (x[, unique(codMOD)] == "05") {
+  if (x[, unique(codMOD)] %in% c("05", "06")) {
     removeCol  <- 9
     auxMensaje <- "'<td colspan=\"1\" align=\"center\"><font size=\"43\" color=\"red\"> ITEM SIN ESTIMACION IRT </font></td>'"
   }
