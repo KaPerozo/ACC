@@ -573,7 +573,7 @@ setMethod("codeAnalysis", "IRT",
         # # Fill other columns in the report
         colFix <- c("CORRELACION", "PCT", "disc", "dif", "azar","INFIT", "OUTFIT", 
                     "BISERIAL", "item_blq", "TRIED", "SUBBLOQUE", "COMPONENTE", "COMPETENCIA", 
-                    "chi2", "gl_chi2", "p_val_chi2")
+                    "chi2", "gl_chi2", "p_val_chi2", "M_prop", "M_mAbility")
         colFix <- colFix[!colFix %in% names(tablaFin)]
         for(col in colFix){
            tablaFin <- cbind(tablaFin, 'newCol' = "No aplica")
