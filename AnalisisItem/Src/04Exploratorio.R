@@ -53,11 +53,10 @@ Exploratory <- function(test, paramExp = NULL) {
 						semilla = format(Sys.time(), "%d%m%Y"),
 						tamSize = 0.5)
   if (!is.null(paramExp)) {
-    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
-    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
-    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
+    isDefault <- setdiff(names(paramDefault), names(paramExp))
+    paramExp  <- c(paramExp, paramDefault[isDefault])
   } else {
-  	paramExp <- paramDefault
+    paramExp <- paramDefault
   }
   cat("----->Se correra un analisis exploratorio con los siguientes parametros: \n \n")
   print(paramExp)
@@ -95,10 +94,7 @@ function(object){
     require(polycor)  # # 0.7-8
     require(mc2d)     # # 0.1-12
     require(ggplot2)  # # 0.8.9
-    require(lavaan)   # # 0.4-10
-    require(semTools)
     require(car)
-    require(semPlot)  # # 0.2-8
     require(GPArotation)
     require(xlsx)
     require(pcaPA)

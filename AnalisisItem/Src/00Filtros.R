@@ -35,9 +35,8 @@ Filtros <- function(test, paramExp = NULL){
                        flagConjunta = FALSE, 
                        flagNOESTU = FALSE) 
   if (!is.null(paramExp)) {
-    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
-    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
-    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
+    isDefault <- setdiff(names(paramDefault), names(paramExp))
+    paramExp  <- c(paramExp, paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }

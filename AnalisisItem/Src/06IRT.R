@@ -67,11 +67,6 @@ IRT <- function(test, paramExp = NULL){
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
                        AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE, 
                        mCentrar = NULL, sdCentrar = NULL)
-  if ("verSalida" %in% names(paramExp)){
-    auxVerSalida <- paramDefault$verSalida
-  } else {
-    auxVerSalida <- 1
-  }
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
@@ -80,8 +75,7 @@ IRT <- function(test, paramExp = NULL){
   }
   cat("----->Se correra un analisis IRT con los siguientes parametros: \n")
   print(paramExp)
-  object <- new("IRT", test = test, param = paramExp, 
-                verSalida = auxVerSalida)
+  object <- new("IRT", test = test, param = paramExp)
   object <- filterAnalysis(object) # Organizando filtros            
   return(object)
 }

@@ -220,8 +220,12 @@ Analysis <- setClass("Analysis",
  					  		  return("Se debe definir un directorio de salida de resultados (Rdata)")
  					      return(TRUE)})
 
-setMethod("initialize", "Analysis", function(.Object, ..., test, param, verSalida) {
+setMethod("initialize", "Analysis", function(.Object, ..., test, param, verSalida = 1) {
 	.Object <- callNextMethod()
+
+    if ("verSalida" %in% names(param)){
+      verSalida <- param$verSalida
+    } 
     if(missing(test)){
       stop("Se debe especificar un objeto 'test = '??? ")
     }

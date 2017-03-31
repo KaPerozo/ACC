@@ -40,9 +40,8 @@ TCT <- function(test, paramExp = NULL){
                        catToNA = c('No Presentado', 'NR', 'Multimarca'), 
                        isCheckKeys = FALSE)
   if (!is.null(paramExp)) {
-    isNew     <- names(paramExp)[names(paramExp) %in% names(paramDefault)]
-    isDefault <- names(paramDefault)[!names(paramDefault) %in% names(paramExp)]
-    paramExp  <- c(paramExp[isNew], paramDefault[isDefault])
+    isDefault <- setdiff(names(paramDefault), names(paramExp))
+    paramExp  <- c(paramExp, paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }
