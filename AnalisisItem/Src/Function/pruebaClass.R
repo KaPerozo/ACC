@@ -521,8 +521,9 @@ setMethod("saveResult", "Analysis", function(object, listResults, srcPath = ".")
      outRdata <- file.path(srcPath, object@outFile$pathRdata)
      if (file.exists(outRdata)){
         joinListResult(listResults, dataRead, outRdata)
+     } else {
+        save(dataRead, listResults, file = outRdata)
      }
-     save(dataRead, listResults, file = outRdata)
 })
 
 # # Definición Metodos necesarios para definir una clase

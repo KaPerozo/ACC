@@ -97,6 +97,7 @@ function(object){
     require(car)
     require(GPArotation)
     require(xlsx)
+    require(sfsmisc)
     require(pcaPA)
     require(reshape)
     require(RColorBrewer) # # 1.0-5
