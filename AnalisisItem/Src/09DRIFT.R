@@ -21,30 +21,27 @@
 # # Heritage class Analysis
 DRIFT <- setClass("DRIFT", contains = "Analysis")
 setMethod("initialize", "DRIFT", function(.Object, ..., param) {
-  .Object@outFile$pathRdata <- "../Output/08DIFF/outList_DIFF.Rdata"
+  .Object@outFile$pathRdata <- "../Output/09DRIFT/outList_DRIFT.Rdata"
   .Object <- callNextMethod()
 })
 
 DRIFT <- function(test, paramExp = NULL){
-  paramDefault <- list(kOmissionThreshold = 1,
-                       flagOri = FALSE, flagTotal = TRUE,
-                       flagSubCon = FALSE, orderedDat = TRUE,
-                       catToNA = c('No Presentado', 'NR', 'Multimarca'),
-                       anchorPath = "")
-  if ("verSalida" %in% names(paramExp)){
-    auxVerSalida <- paramDefault$verSalida
-  } else {
-    auxVerSalida <- 1
-  }
-
+  paramDefault <- list(anchorPath = "", anchorForm = "",
+                       driftSeed = format(Sys.time(), "%d%m%Y"),
+                       nReplicates = 1000, irtModel = "3pl", 
+                       alphaCut = 0.05)
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
   } else {
     paramExp <- paramDefault
   }
+
+  if (paramExp$anchorPath == "" | paramExp$anchorForm == "") {
+    stop("ERROR ... Se debe definir 'anchorPath' y 'anchorForm' en los parametros.\n")
+  }
   cat("-----> Se correra un analisis DRIFT con los siguientes parametros: \n")
-  print(paramExp)
+  print(paramExp) 
   object <- new("DRIFT", test = test, param = paramExp, 
                 verSalida = auxVerSalida)
   object <- filterAnalysis(object)
@@ -56,24 +53,182 @@ DRIFT <- function(test, paramExp = NULL){
 # # Definition of codeAnalysis Method
 ################################################################################
 
+# # Heritage class Analysis
+DRIFT <- setClass("DRIFT", contains = "Analysis")
+
 setMethod("codeAnalysis", "DRIFT",
-  analDIFF <- function(object){
+  analDRIFT <- function(object){
     cat("O.o--Inicio la corrida de DRIFT--o.O\n")
-    binPath <- file.path("..", "Src", "bin")
-    outPath <- file.path(outPath, "08DIFF")
+    pathIRT  <- getOutFile(object@test, "IRT")$pathRdata
+    outPath <- file.path(outPath, "09DRIFT")
     dir.create(outPath, recursive = TRUE, showWarnings = FALSE)
 
     ################################################################################
     # # Load libraries
     ################################################################################
-
+    library(plink)
+    library(xlsx)
+    library(DFIT)
+    library(ggplot2)
 
     ###############################################################################
-    # # Load wrapWS.R functions
+    # # Load data base
+    ################################################################################
+    # # Current aplication
+    statApp1 <- getAnchors(pathIRT, names(object@datAnalysis))
+    setnames(statApp1, c("disc", "dif", "azar"), c("a", "b", "c"))    
+    statApp1 <- statApp1[!(is.na(a) & is.na(b) & is.na(c)), ]
+    
+    # # Last aplication
+    if (!is.null(object@param$anchorPath)) {   
+      statApp2 <- getAnchors(object@param$anchorPath, object@param$anchorForm)
+      setnames(statApp2, c("disc", "dif", "azar"), c("a", "b", "c"))      
+      statApp2 <- statApp2[!(is.na(a) & is.na(b) & is.na(c)), ]
+    }   
+    ###############################################################################
+    # # Combine two data base of items
     ################################################################################
 
+    statApp1[ , "pos_App1"] <- 1:nrow(statApp1)
+    statApp2[ , "pos_App2"] <- 1:nrow(statApp2)
+    statComp <- merge(statApp1, statApp2, by = "item", suffixes = c("_App1", "_App2"))
+    statComp <- data.frame(statComp)
+    statComp[ , "seqItem"] <- 1:nrow(statComp)
+    statComp[ , "kRatio"]  <- floor(statComp[ , "TRIED_App2"] / statComp[ , "TRIED_App1"])
+    
+    # Tamaños muestrales
+    iItems <- ddply(statComp, .(TRIED_App1, TRIED_App2), summarize, nItems = length(item))
+    
+    # Ítema iguales con cambios
+    idenItem <- data.frame(item = statComp[ , "item"])
+    idenItem[ , "itemI"] <- substr(as.character(idenItem[ , "item"]), 1, 7)
+    iItemsChan <- ddply(idenItem, .(itemI), summarize, nItems = length(itemI))
 
-  })
+    # Posiciones Items Comunes
+    posItemCom <- data.frame(app1 = statComp[ , "pos_App1"], app2 = statComp[ , "pos_App2"])
+    # Listas
+    param <- list(app1 = subset(statApp1, select = c(a, b, c)), 
+                  app2 = subset(statApp2, select = c(a, b, c)))
+    # Item comunes
+    itemCom <- intersect(statApp1[, "item"], statApp2[, "item"])
+    
+    ################################################################################
+    # # plink - Rescale Stocking-Lord
+    ################################################################################
+    nitem1 <- nrow(statApp1)
+    nitem2 <- nrow(statApp2)  
+    # Items
+    pm1 <- as.poly.mod(nitem1)
+    pm2 <- as.poly.mod(nitem2)
+    x <- as.irt.pars(param, posItemCom,
+                     cat=list(rep(2, nitem1), rep(2, nitem2)), 
+                     poly.mod = list(pm1, pm2))
+    out <- plink(x, rescale = "SL", base.grp = 2, D = 1.7)
+
+    ################################################################################
+    # # DIFT
+    ################################################################################
+    pars.out <- link.pars(out)
+    
+    focalParam <- pars.out$group1[statComp[ , "pos_App1"], ]
+    referParam <- pars.out$group2[statComp[ , "pos_App2"], ]
+    
+    threePlParameters <- list(     focal= focalParam,
+                              reference = referParam)
+    
+    nItems <- nrow(threePlParameters[['focal']])
+
+    ################################################################################
+    # # Calculos
+    ################################################################################
+    ## NCDIF, CDIF and DFT
+    ncdif3pl <- Ncdif(itemParameters = threePlParameters, irtModel = object@param@irtModel, focalAbilities = NULL,
+                      focalDistribution = "norm", subdivisions = 5000, logistic = FALSE)
+    
+    cdif3pl <- Cdif(itemParameters = threePlParameters, irtModel = object@param@irtModel, focalAbilities = NULL,
+                    focalDistribution = "norm", subdivisions = 5000, logistic = FALSE)
+    
+    (dtf3plWithCdif <- Dtf(cdif = cdif3pl))
+    
+    ## Mantel-Haenszel
+    
+    # # groupRatio programaticamente el calculo
+    mh3Pl <- IrtMh(itemParameters = threePlParameters, irtModel = object@param@irtModel,
+                   focalDistribution = "norm", referenceDistribution = "norm",
+                   focalDistrExtra = list(mean = 0, sd = 1),
+                   referenceDistrExtra = list(mean = 0, sd = 1), groupRatio = 87, logistic = FALSE)
+    
+    delta3Pl <- DeltaMhIrt(mh3Pl)
+
+    ################################################################################
+    # # Ncdif - The noncompensatory DIF index.
+    ################################################################################
+    # Ncdif
+    threePlNcdifIpr <- IprNcdif(itemParameterList = threePlIpr, 
+                                irtModel = object@param@irtModel, logistic = TRUE)    
+    signifAux      <- 1 - object@param$alphaCut
+    cutoff3plNcdif <- CutoffIpr(quantiles = c(signifAux), iprStatistics = threePlNcdifIpr,
+                                itemParameterList = threePlIpr, itemParameters = nullParameters,
+                                itemCovariances = threePlAse,
+                                irtModel = object@param@irtModel, statistic = "ncdif")
+    
+    #################################################################################
+    ## # Mantel-Haenszel
+    #################################################################################
+    ## Mh
+    threePlMhIpr <- IprMh(itemParameterList = threePlIpr, 
+                          irtModel = object@param@irtModel, logistic = TRUE)
+    
+    # incluir alphaCut
+    signifAux   <- c(object@param$alphaCut / 2, 1 - object@param$alphaCut / 2) 
+    cutoff3plMh <- CutoffIpr(quantiles = signifAux, iprStatistics = threePlMhIpr,
+                             itemParameterList = threePlIpr, itemParameters = nullParameters,
+                             itemCovariances = threePlAse, irtModel = object@param@irtModel, statistic = "mh")
+
+    ################################################################################
+    # # Consolida salidas
+    ################################################################################
+    # Estadísticos
+    infoStat <- data.frame(ncdif = ncdif3pl, 
+                           cutoffNcdif = cutoff3plNcdif$quantile,
+                           cdif = cdif3pl, delta = delta3Pl, dtf = dtf3plWithCdif,
+                           mhLow = cutoff3plMh$quantiles[1,], mh = mh3Pl, 
+                           mhSup = cutoff3plMh$quantiles[2,])
+    
+    infoStat[ , "IndDif_Ncdif"] <- ifelse(infoStat[ , "ncdif"] > 
+                                   infoStat[ , "cutoffNcdif"], 1, 0)
+    infoStat[ , "IndDif_Mh"] <- ifelse(infoStat[ , "mh"] > infoStat[ , "mhSup"] | 
+                                infoStat[ , "mh"] < infoStat[ , "mhLow"], 1, 0)
+    # Item
+    infoItem <- data.frame(focal = focalParam, refer = referParam)
+    infoItem <- cbind(infoItem, statComp[, c("item", "seqItem", "TRIED_App1", 
+                                         "TRIED_App2")])
+    infoItem <- rename(infoItem, c("item" = "Item", "seqItem" = "nItem",
+                                   "focal.1" = "a.focal", "focal.2" = "b.focal", 
+                                   "focal.3" = "c.focal", "refer.1" = "a.refer", 
+                                   "refer.2" = "b.refer", "refer.3" = "c.refer",
+                                   "TRIED_App1" = "nSample.focal", 
+                                   "TRIED_App2" = "nSample.refer"))
+    infoItem[ , "focal"] <- "20161"
+    infoItem[ , "refer"] <- "20162"
+    
+    # Diferencias
+    infoItem[, "rfdif.a"] <- round(infoItem[, "a.refer"] - infoItem[, "a.focal"], 2)
+    infoItem[, "rfdif.b"] <- round(infoItem[, "b.refer"] - infoItem[, "b.focal"], 2)
+    infoItem[, "rfdif.c"] <- round(infoItem[, "c.refer"] - infoItem[, "c.focal"], 2)
+    
+    # Exporta
+    infoExp <- cbind(infoItem, infoStat)
+    
+    varOrd <- c("focal", "refer", "nItem", "Item", "a.focal", "b.focal", 
+                "c.focal", "a.refer", "b.refer", "c.refer", "rfdif.a", "rfdif.b", 
+                "rfdif.c", "nSample.focal", "nSample.refer", "ncdif", 
+                "cutoffNcdif", "IndDif_Ncdif", "cdif", "delta", "dtf", "mhLow",
+                "mh", "mhSup", "IndDif_Mh")
+    infoExp <- infoExp[, varOrd]
+    infoExp
+
+})
 
 ################################################################################
 # # Definition of output files

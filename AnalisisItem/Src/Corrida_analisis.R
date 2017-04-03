@@ -64,8 +64,8 @@ publishRepo(vecJson, pathDest = "\\\\icfesserv5\\Analisisitems$",
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-# listTests <- analyzeTests(fileJson, getDatBlocks = TRUE)
+listTests <- analyzeTests(vecJson[2], getDatBlocks = TRUE)
 
-# prueba0 <- listTests[["Test1"]]
-# prueba0 <- readSupplies(prueba0)
-# object  <- prueba0@listAnal[["IRT"]]
+prueba0 <- listTests[["Test1"]]
+prueba0 <- readSupplies(prueba0)
+object  <- prueba0@listAnal[["IRT"]]

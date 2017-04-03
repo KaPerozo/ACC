@@ -53,6 +53,11 @@ Test <- setClass("Test",
  				stop("El parametro 'conDirs' debe contener almenos un .con")
  			return(TRUE)
  		})
+# # Methods extraer la salida de un analisis
+setGeneric(name = "getOutFile", def = function(object,...){standardGeneric("getOutFile")})
+setMethod("getOutFile", "Test", function(object, analysis){
+           return(getParams(object@listAnal[[analysis]]@outFile))
+        })
 
 # # Methods's Test Class
 setGeneric(name = "readSupplies", def = function(object){standardGeneric("readSupplies")})
@@ -660,6 +665,9 @@ armaIdentifica <- function(listTests, patternExclu = "(-21|01JN|-06|-07|(pbaF\\d
     return(cat("-----Archivo para DIFF generado!!-----\n"))
 }
 
+################################################################################
+# # Función para correr análisis
+################################################################################
 
 setGeneric(name = "runAnalysis", def = function(object, ...){standardGeneric("runAnalysis")})
 setMethod("runAnalysis", "Test",
@@ -709,6 +717,10 @@ function(object, jsonTest, anUpdate = NULL){
   }
   return(object)
 })
+
+################################################################################
+# # Función para crear los reportes HTML
+################################################################################
 
 jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
   # # Crear el reporte html para 1 o varias pruebas
@@ -764,6 +776,9 @@ jointReports <- function(listTests, vecJson, pathJS = 'lib', flagView = FALSE){
   }
 }
 
+################################################################################
+# # Función para llenar carpeta compartida
+################################################################################
 
 publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
   # # Lectura de json 
@@ -874,3 +889,54 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
   }
 }
 
+################################################################################
+# # Función para unir diferentes bases de anclaje
+################################################################################
+
+getAnchors <- function(fileAncla, formAncla){
+     # # Comprobacion de parametros
+     if (length(fileAncla) != length(formAncla)) {
+       stop("La longitud de 'AnclaRdata' y de 'formAncla' no es la misma")
+     } 
+
+     # # Armando data frame     
+     listResultsAN <- NULL
+     for (jj in seq(length(fileAncla), 1)) {
+        if (file.exists(fileAncla[jj])){
+          load(fileAncla[jj])  
+        } else {
+          stop("ERROR...... No encontre 'AnclaRdata': ", fileAncla[jj])
+        }
+ 
+        if (formAncla[jj] %in% names(listResults)) {
+          cat("...... Lecutura de la forma", formAncla[jj], 
+              "\n...... del archivo:", fileAncla[jj], "\n")
+          auxCalibra <- listResults[[formAncla[jj]]]$tablaFin
+          if (!is.null(listResultsAN)) {
+            isNewCal   <- !auxCalibra[, item] %in% listResultsAN[, item]
+            auxCalibra <- auxCalibra[isNewCal, ]
+            auxCalibra <- subset(auxCalibra, select = intersect(names(auxCalibra), 
+                                 names(listResultsAN)))
+            listResultsAN <- subset(listResultsAN, select = intersect(names(auxCalibra), 
+                                 names(listResultsAN)))
+          }
+          listResultsAN <- rbind(listResultsAN, auxCalibra)
+        } else {
+          stop("ERROR...... No se encontro la forma... ", formAncla[jj], 
+               "en el archivo 'AnclaRdata': ", fileAncla[jj])
+        }
+        # # Parametros de transformacion
+        posBuscar <- ifelse(!is.null(object@param$posMeSig), 
+                            object@param$posMeSig, length(fileAncla))
+        if (jj == posBuscar) {
+            cat("Transformacion con :", fileAncla[jj], "\n")
+            meanAbilParam <- listResults[[formAncla[jj]]]$meanAbil
+            sdAbilParam   <- listResults[[formAncla[jj]]]$sdAbil
+        }
+        rm(listResults)         
+     }
+     listResultsAN[, TRIED := as.numeric(TRIED)]
+     assign("meanAbilParam", meanAbilParam, .GlobalEnv)
+     assign("sdAbilParam", sdAbilParam, .GlobalEnv)
+     return(listResultsAN)
+}
