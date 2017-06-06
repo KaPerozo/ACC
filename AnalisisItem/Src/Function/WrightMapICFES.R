@@ -1,5 +1,5 @@
 ################################################################################
-# # 00ValidacionesEK20153.R
+# # WrightMapICFES.R
 # # R Versions: 3.2.0
 # #
 # # Author(s): Dora Suarez
@@ -7,14 +7,15 @@
 # # SABER PRO
 # # Description: Grafica el mapa de items personas
 # #
-# # Inputs: Pfile y Ifile de la prueba que quiere ser vista
-# #
+# # Inputs: infoItem y infoCal data frames con las habilidades y las calibraciones
+# #         de los items
 # # Outputs: Grafico de items personas
 # #
 # # File history:
 # #   20150922: Creation
 # #   20151024: Creación de la función y inclusión de otros parametros 
 # #             para el grafico creado en ggplot
+# #   20170606: Actualización del paquete ggplot2
 ################################################################################
 
 ################################################################################
@@ -45,7 +46,7 @@ WrightMapICFES <- function(infoItem, infoCal, colHab, colDiff,
   p <- p + geom_density(data = subset(data, grupos == "ITEM"), aes(y = ..density..), alpha = 0.1)
   
   # # Calcular las medias, minimo, maximo en Y
-  pg     <- suppressWarnings(ggplot_build(p)$panel$ranges[[1]]$x.range)
+  pg     <- suppressWarnings(ggplot_build(p)$layout$panel_ranges[[1]]$x.range)
   medias <- tapply(measure, grupos, mean)
   medias <- data.frame(t(medias), 'PERS2'=pg[1], 'ITEM2' = pg[2])
   
