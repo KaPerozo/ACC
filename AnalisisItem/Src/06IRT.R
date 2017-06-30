@@ -65,8 +65,10 @@ IRT <- function(test, paramExp = NULL){
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
-                       AnclaRdata = NULL, formAncla = "", flagSPrior = FALSE, 
-                       mCentrar = NULL, sdCentrar = NULL)
+                       AnclaRdata = NULL, formAncla = "",
+                       flagSPrior = FALSE, flagTPrior = FALSE,
+                       mCentrar = NULL, sdCentrar = NULL, 
+                       minPun= NULL, maxPun = NULL)
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
@@ -114,15 +116,15 @@ setMethod("codeAnalysis", "IRT",
   dir.create(outPath, recursive = TRUE, showWarnings = FALSE)    
 
   # # Load libraries
-  require(psych)  # # 1.1.10
-  require(ggplot2)  # # 0.9.3.1
-  require(gtools)  # # 3.2.1
-  require(scales)  # # 0.2.3
-  require(car)  # # 2.0-19
-  require(LaF)  # # 0.5
-  require(data.table)  # # 1.8.10
-  require(RColorBrewer) # # 1.0-5
-  require(gridExtra)
+  library(psych)  # # 1.1.10
+  library(ggplot2)  # # 0.9.3.1
+  library(gtools)  # # 3.2.1
+  library(scales)  # # 0.2.3
+  library(car)  # # 2.0-19
+  library(LaF)  # # 0.5
+  library(data.table)  # # 1.8.10
+  library(RColorBrewer) # # 1.0-5
+  library(gridExtra)
 
   # # load functions
   source(file.path(funPath, "univariateFunctions01.R"))
@@ -155,7 +157,7 @@ setMethod("codeAnalysis", "IRT",
   if (!is.null(object@param$AnclaRdata)) {          
      fileAncla <- object@param$AnclaRdata
      formAncla <- object@param$formAncla
-     listResultsAN <- getAnchors(fileAncla, formAncla)
+     listResultsAN <- getAnchors(object, fileAncla, formAncla)
   } else {
      listResultsAN <- NULL
   }
@@ -234,7 +236,6 @@ setMethod("codeAnalysis", "IRT",
         isMissingHalf <- rep(FALSE, nrow(dataCor))
         indexData     <- paste(auxPru, "_V", versionOutput, sep = "")
       }
-
       # # Check the grouping in RSM blocks
       rsmType             <- LETTERS[1:length(indexItems)]
       codModels           <- subset(dictVarPrueba, select =  c("id", "codMod"))
@@ -267,16 +268,16 @@ setMethod("codeAnalysis", "IRT",
         
         # # Create .blm and .dat file
         personDataBlo <- personDataBlo[!isMissingHalf]        
-        RunBilog(responseMatrix = resBlock,
-                 runName = indexData,  srcPath = auxPath,
-                 outPath = file.path("..", 'salidas'),
-                 personIds = as.character(personDataBlo[[1]]), 
-                 itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
-                 runPath = file.path(outPath, 'corridas'),
-                 verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
-                 commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
-                 datAnclas = listResultsAN, 
-                 flagSPrior = object@param$flagSPrior)
+        auxCons <- RunBilog(responseMatrix = resBlock,
+                            runName = indexData,  srcPath = auxPath,
+                            outPath = file.path("..", 'salidas'),
+                            personIds = as.character(personDataBlo[[1]]), 
+                            itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
+                            runPath = file.path(outPath, 'corridas'),
+                            verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
+                            commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
+                            datAnclas = listResultsAN, flagTPrior =  object@param$flagTPrior,
+                            flagSPrior = object@param$flagSPrior)
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")
@@ -319,6 +320,9 @@ setMethod("codeAnalysis", "IRT",
         } else {
            load(outFileAbili)
         }
+
+        # # Calcular confiabilidad de la prueba
+        irtAlpha <- WLErel(theta = personAbilities[, "ABILITY"], error = personAbilities[, "SERROR"])
 
         # # habilidades por TCT
         if (auxCodModel == "00") {
@@ -548,6 +552,9 @@ setMethod("codeAnalysis", "IRT",
                        'dir_ICC') := list(NA, NA, NA, NA, NA, NA, NA, NA, '')]
         }
 
+        minPun <- object@param$minPun
+        maxPun <- object@param$maxPun
+
         # # Alertas
         tablaFin <- cbind(tablaFin, tablaFin[, list(
                           'codMOD' = unique(codModels),
@@ -560,16 +567,19 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGOUTFIT' = 0,  #ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(abs(dif) > 3 & disc > 0.5, 1, 0),
+                          'FLAGDIF' = ifelse((dif_NEW + eedif_NEW > maxPun) | (dif_NEW - eedif_NEW < minPun), 1, 0),                          
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
                           'FLAGCHI2' = 0, #ifelse(p_val_chi2 > 0.1, 1, 0), 
-                          'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0), 
-                          'FLAGCV' = ifelse(eedif_NEW > 30, 1, 0))])
-        tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]
+                          'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0)
+                          #'FLAGDIF' = ifelse(eedif_NEW > 30, 1, 0))]
+        )])
+        # tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]
         listResults[[auxPru]][["tablaFin"]] <- tablaFin
-
+        listResults[[auxPru]][["irtAlpha"]] <- irtAlpha
         # # Guardando media y Varianza
         listResults[[auxPru]][["meanAbil"]] <- meanAbil
         listResults[[auxPru]][["sdAbil"]]   <- sdAbil
+        listResults[[auxPru]][["consFCIP"]] <- auxCons
       }
       outPath <- auxOutPath
   }
@@ -626,7 +636,7 @@ function(object, srcPath = "."){
                         "codigo_prueba", "keyItem", "Ancla", "order", "TRIED", "RIGHT", "PCT", "LOGIT", "PEARSON", 
                         "BISERIAL", "FLAGPROP", "FLAGKEY2", "CORRELACION", "SUBBLOQUE", "COMPONENTE", "COMPETENCIA", 
                         "FLAGMEAN", "FLAGCORR", "FLAGA", "FLAGB", "FLAGBISE", "FLAGKEY1", "FLAGKEY3", 
-                        "FLAGDIFDIS", "FLAGAZAR", "FLAGINFO", "FLAGCV")
+                        "FLAGDIFDIS", "FLAGAZAR", "FLAGINFO", "FLAGDIF")
 
      varDescrip <- c("Código del ítem","Dirección de la grafica de opciones de respuesta", 
                     "Dirección de la grafica de la curva caracteristica","Punto de máxima información del ítem",
@@ -656,7 +666,7 @@ function(object, srcPath = "."){
                     "Si la dificultad original es mayor a 3 o menor que -3", "Si la correlación Biserial es menor que 0.1","","",
                     "Si la dificultad en valor absoluto es mayor a 3 y la discriminación es menor 0.5",
                     "Si el azar es mayor a 0.25 o el error de estimación del azar > 0.15",
-                    "Indicadora del ítem con la 'mayor' información", "Si el coeficiente de variación es mayor a 30")
+                    "Indicadora del ítem con la 'mayor' información", "Si la dificultad mas/menos error estandar esta entre los rangos de la prueba")
 
      tablaDescri <- data.frame('V1' = labelVariable, 'V2' = varDescrip)
      names(tablaDescri) <- c('Variable', 'Descripción')
@@ -787,6 +797,7 @@ function(object, srcPath){
         plot(plotInfo)
       }      
       cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
+      listResults[[nomAux]]$tablaFin[, eedif_NEW := sprintf("%.2f", eedif_NEW)]
       tabHtml <- reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
       cat(as.character(htmltools::tagList(tabHtml)))
       cat(paste0('<td> <li class="linkxlscol"><a href="', listResults[[nomAux]]$fileXLSX, 
