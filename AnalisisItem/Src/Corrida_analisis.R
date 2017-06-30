@@ -64,8 +64,18 @@ publishRepo(vecJson, pathDest = "\\\\icfesserv5\\Analisisitems$",
 ################################################################################
 # # Depuración metodo 
 ################################################################################
-# listTests <- analyzeTests(vecJson[2], getDatBlocks = TRUE)
-
-# prueba0 <- listTests[["TestJUN"]]
+# prueba0 <- listTests[["Test1"]]
 # prueba0 <- readSupplies(prueba0)
-# object  <- prueba0@listAnal[["IRT"]]
+# object  <- IRT(test = prueba0, paramExp = list("kOmissionThreshold" = 1))
+
+#object  <- listTests[["TestNOES"]]@listAnal[["IRT"]]
+#codeAnalysis(object)
+#outHTML(object)
+
+# prueba0 <- new('Test', path = "JUNTURAS/EK20161/exam717/PBAF000401JN", 
+# 	           exam = "SABERTYT", codMod = "07", verInput = 1, 
+#                periodo = "EK20161", nomTest = "SABER T&T(Lectura Crítica Conjunta)", 
+#                paramLect = list("conDirs" = "pbaF000401JN.con"))
+# object <- IRT(test = prueba0, paramExp = list("kOmissionThreshold" = 1))
+# codeAnalysis(object)
+# outHTML(object)
