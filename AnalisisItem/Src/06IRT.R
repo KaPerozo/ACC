@@ -320,6 +320,7 @@ setMethod("codeAnalysis", "IRT",
         } else {
            load(outFileAbili)
         }
+        dCohen <- mean(personAbilities$ABILITY) - mean(itemParameters$dif) / sd(personAbilities$ABILITY)
 
         # # Calcular confiabilidad de la prueba
         irtAlpha <- WLErel(theta = personAbilities[, "ABILITY"], error = personAbilities[, "SERROR"])
@@ -337,6 +338,7 @@ setMethod("codeAnalysis", "IRT",
                                           personAbilities[, 'TRIED'] * 100
         }
  
+        
         # # Usando promedio de anclaje
         if (!is.null(object@param$AnclaRdata)) { # Indicadora de Anclas
           meanAbil <- meanAbilParam
@@ -554,6 +556,10 @@ setMethod("codeAnalysis", "IRT",
 
         minPun <- object@param$minPun
         maxPun <- object@param$maxPun
+        if (is.null(minPun) & is.null(maxPun)) {
+          maxPun <- object@param$espMean + 5 * object@param$espSd
+          minPun <- object@param$espMean - 5 * object@param$espSd 
+        }
 
         # # Alertas
         tablaFin <- cbind(tablaFin, tablaFin[, list(
@@ -567,15 +573,17 @@ setMethod("codeAnalysis", "IRT",
                           'FLAGOUTFIT' = 0,  #ifelse((OUTFIT < minOutms[indPos]) | (OUTFIT > maxOutms[indPos]), 1, 0), 
                           'FLAGKEY1' = 0, 'FLAGKEY3' = 0,
                           'FLAGDIFDIS' = ifelse(abs(dif) > 3 & disc > 0.5, 1, 0),
-                          'FLAGDIF' = ifelse((dif_NEW + eedif_NEW > maxPun) | (dif_NEW - eedif_NEW < minPun), 1, 0),                          
+                          'FLAGDIF' = ifelse((dif_NEW + eedif_NEW > maxPun) | (dif_NEW - eedif_NEW < minPun), 1, 0),
                           'FLAGAZAR'  = ifelse(azar > 0.25 | eeazar > 0.15, 1, 0), 
                           'FLAGCHI2' = 0, #ifelse(p_val_chi2 > 0.1, 1, 0), 
-                          'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0)
+                          'FLAGINFO' = ifelse(max(maxINFO, na.rm = TRUE) == maxINFO, 1, 0),
+                          'FLAGCV' = 0
                           #'FLAGDIF' = ifelse(eedif_NEW > 30, 1, 0))]
         )])
         # tablaFin[, eedif_NEW := paste0(sprintf("%.2f", eedif_NEW), "%")]
         listResults[[auxPru]][["tablaFin"]] <- tablaFin
         listResults[[auxPru]][["irtAlpha"]] <- irtAlpha
+        listResults[[auxPru]][["dCohen"]]   <- dCohen
         # # Guardando media y Varianza
         listResults[[auxPru]][["meanAbil"]] <- meanAbil
         listResults[[auxPru]][["sdAbil"]]   <- sdAbil
@@ -796,6 +804,25 @@ function(object, srcPath){
       if (object@test@codMod != "00") {
         plot(plotInfo)
       }      
+      cat('El coeficiente de confiabilidad (bajo el modelo de IRT) para el total de preguntas de la prueba es de', 
+          listResults[[nomAux]][["irtAlpha"]], '. ')
+      cat('La diferencia entre la habilidad promedio de los evaluados en la prueba',
+         'y la dificultad promedio de la prueba se determinará a través de la d de Cohen.',
+         'Para su estimación se usará la desviación estándar de la habilidad de los evaluados.', 
+         'Para esta prueba la <i>d de Cohen </i> es', listResults[[nomAux]][["dCohen"]],
+         ', para su interpretación la siguiente',
+         'tabla presenta la descripción de los rangos posibles.')
+
+      rangoAux <- c("Mayor que 0.8", "0.5 a 0.8", "0.2 a 0.5", 
+                    "-0.2 a 0.2", "-0.5 a -0.2", "-0.8 a -0.5", "Menor que -0.8")
+      descrAux <- c("Fácil", "Moderadamente fácil", "Levemente fácil", 
+                    "Media", "Levemente difícil","Moderadamente difícil", "Difícil")
+      descrAux <- data.frame(rangoAux, descrAux)
+      bold.somerows <- function(x) gsub('BOLD\\((.*)\\)',paste('<b> \\1 <\\b>'),x)
+      names(descrAux) <-c("d de Cohen", "Dificultad de la prueba")
+      tableHtml <- xtable(descrAux, caption = "Tabla descripción d-cohen")
+      print(tableHtml, type = "html", html.table.attributes = "id=\"conteos\" style=\"width:65%;\"", 
+            include.rownames = FALSE, sanitize.text.function = bold.somerows)          
       cat('<h3 id="IRT_Header_tab">\n', nomSub, '</h3>\n\n')
       listResults[[nomAux]]$tablaFin[, eedif_NEW := sprintf("%.2f", eedif_NEW)]
       tabHtml <- reporteItem(listResults[[nomAux]]$tablaFin, idPrueba = nomAux)    
