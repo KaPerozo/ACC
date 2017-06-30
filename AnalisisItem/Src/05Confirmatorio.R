@@ -40,18 +40,19 @@ Confirmatory <- setClass("Confirmatory", contains = "Analysis")
 setMethod("initialize", "Confirmatory", function(.Object, ..., param) {
   .Object@outFile$pathRdata <- "../Output/05Confirmatorio/resulCONF.Rdata"
   .Object <- callNextMethod()
- })
+})
 
 
 Confirmatory <- function(test, paramExp = NULL) { 
   paramDefault <-  list(kOmissionThreshold = 0.5,
-                 flagOri = FALSE, flagTotal = TRUE,
-                 flagSubCon = TRUE, orderedDat = TRUE,
-                 catToNA = c('No Presentado', 'NR', 'Multimarca'),
-                 seqFactors = NULL, rotation = 'oblimin',
-                 semilla = format(Sys.time(), "%d%m%Y"),
-                 useCor = "pairwise.complete.obs"; 
-                 tamSize = 0.5)
+                        flagOri = FALSE, flagTotal = TRUE,
+                        flagSubCon = TRUE, orderedDat = TRUE,
+                        catToNA = c('No Presentado', 'NR', 'Multimarca'),
+                        seqFactors = NULL, rotation = 'oblimin',
+                        semilla = format(Sys.time(), "%d%m%Y"),
+                        useCor = "pairwise.complete.obs", 
+                        tamSize = 0.5, flagUni = TRUE, flagMultiC  = TRUE,
+                        flagMultiNC = TRUE, flagBiFac  =TRUE)
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
@@ -69,13 +70,8 @@ Confirmatory <- function(test, paramExp = NULL) {
 ################################################################################
 # # global definitions
 ################################################################################
-
-setGeneric(name = "confirmatAnalysis", def = function(object, ...){standardGeneric("confirmatAnalysis")})
-
-# object <- controlData[[prueba]]
-# object <- controlData[['./SABER9/SA20131/JP_M10_M11_M15_M16_M17_M19_M20_M21_M22_M23_M24_M3/PBAM10']]
-setMethod("confirmatAnalysis", "Test",
-          function(object, auxAnalisis){
+setMethod("codeAnalysis", "Confirmatory",
+          function(object){
             #object <- filterAnalysis(object) # Organizando filtros
             
             ###############################################################################
@@ -101,41 +97,30 @@ setMethod("confirmatAnalysis", "Test",
             source(file.path(funPath, "MeasurementModelsWithLavaan.R"))
             source(file.path(funPath, "corItem.R"))
             source(file.path(funPath, "confirmatoryFunctions.R"))            
-
+            
             # # Directory Definition
             outPath  <- file.path(outPath, "05Confirmatorio")
             dir.create(outPath)
             
-            useCor = "pairwise.complete.obs", 
-            useMatrixCorr = 'policoricas', 
-            kOmissionThreshold  = 0.8, 
-            codesRasch = c('01', '02'), 
-            kCodNElim = '06',
-            kCodPar   = '01',
-            kCodMod   = '00',
-
-            flagUni     <- TRUE, flagMultiC  <- TRUE,
-            flagMultiNC <- TRUE, flagBiFac   <- TRUE
-                                  
+            # # version of input dictionary
+            verDataIn <- object@test@verInput
+            
             ###########################################################################
             # # Other Functions
             ###########################################################################
-                                             
-            versionComment <- paste0("Corrida Análisis Confirmatorio --", 
-                                     object@test@nomTest, "--\n")
             listResults <- list()
-          
+            
             for (kk in names(object@datAnalysis)) {
               # # create folder and routes to save results
               # #  carpetas por prueba
-          
+              
               auxPru    <- gsub("(::|\\s)","_", kk)
-              outPathPba <- file.path(outPath, auxPru)
-          
+              outPathPba <<- file.path(outPath, auxPru)
+              
               # #  carpetas de muestras por prueba
               outPathSamPba   <- file.path(outPath, "../Muestras", auxPru)
-              outPathPbaGraph <- file.path(outPath, "graficas")
-
+              outPathPbaGraph <- file.path(outPathPba, "graficas")
+              
               if(!file.exists(file.path(outPath, "../Muestras"))) {
                 cat("Se creo la carpeta muestras en el output!!!!!\n")
               } 
@@ -146,20 +131,33 @@ setMethod("confirmatAnalysis", "Test",
               dictVarPrueba <- object@datAnalysis[[kk]]$dictionary
               varId         <- dictVarPrueba[, 'id']             
               if (is.null(object@datAnalysis[[kk]])) {
-                  warning('No tiene Datos para hacer exploratory', kk)
-                  next
+                warning('No tiene Datos para hacer confirmatorio', kk)
+                next
               }
               
+              if (!'subCon' %in% names(dictVarPrueba)) {
+                stop("Falta agregar 'indiceInfo' y 'infoItem'")
+              }
               # # variables by index
-              dictKk <- subset(dictVarPrueba, select = c(id, indice))             
+              dictKk <- subset(dictVarPrueba, select = c(id, subCon))             
               if (nrow(dictKk) == 0) {
                 stop('No tiene Items para hacer la corrida en PBA', nomKK,
-                      'Revise si todos los Items estan eliminados o si tiene alguna
-                      escala diferente a NI')
+                     'Revise si todos los Items estan eliminados o si tiene alguna
+                     escala diferente a NI')
               }
               
               # # Definir la base de datos
               kkBlock  <- as.data.frame(object@datAnalysis[[kk]]$datos)
+              
+              # # Eliminar ítems sin afirmación 
+              indAfirmacion <- dictVarPrueba[, "subCon"] == "NOFIND"
+              if (any(indAfirmacion)) {
+                dictVarPrueba <- subset(dictVarPrueba, !indAfirmacion)
+                indAfirmacion <- subset(dictVarPrueba, indAfirmacion, select = "id")
+                indAfirmacion <- names(kkBlock)[!names(kkBlock) %in% indAfirmacion]
+                kkBlock <- kkBlock[,  indAfirmacion]
+                
+              }
               
               # # Number of observations
               nObsConfirmatory <- nrow(kkBlock)
@@ -169,95 +167,100 @@ setMethod("confirmatAnalysis", "Test",
                                           semilla = object@param$semilla, 
                                           tamMue = object@param$tamSize, 
                                           flagExplo = FALSE,
-                                          varId = varId, useCor = useCorExp)
-
-              if(class(corBlock) == "try-error" | isUniItem){
-                  cat("_____ No se estimo la matriz tetracorica", 
-                      "/policórica inicial _______\n\n")
-                  next
+                                          varId = varId, useCor = object@param$useCor)
+              
+              if(class(corBlock) == "try-error"){
+                cat("_____ No se estimo la matriz tetracorica", 
+                    "/policorica inicial _______\n\n")
+                next
               }
-
+              
               # # Run structural equation model
               vecFlags  <- c('flagUni' = object@param$flagUni,
                              'flagMultiC' = object@param$flagMultiC,
                              'flagMultiNC' = object@param$flagMultiNC,
                              'flagBiFac' = object@param$flagBiFac)
-
-              
-              isUniItem <- length(unique(dictVarPrueba$indice)) == 1
+              isUniItem <- length(unique(dictVarPrueba$subCon)) == 1
               if (isUniItem) {
                 vecFlags[-1] <- FALSE
               }
               
               # # Ajustes para que en el modelo no confunda los interceptos
-              corConfBlockX <- corBlock$cor
+              corConfBlockX <- corBlock$corBlock$correlations
               codItemR      <- rownames(corConfBlockX)
-        
+              
               for(ii in codItemR) {
                 Idx <- paste0('IT', codItemR)
                 rownames(corConfBlockX) <- colnames(corConfBlockX) <- Idx
               }
-
-              dictVarPrueba[, 'idx'] <- paste('I', dictVarPrueba[, 'id'], sep =  '')
+              dictVarPrueba[, 'idx'] <- paste('IT', dictVarPrueba[, 'id'], sep =  '')
+              nomAuxPru <- gsub("-", "_", kk)
+              for (flag in names(vecFlags[vecFlags])){
+                listResults[[auxPru]][[flag]] <- genConfirmatory(dictVarPrueba, corConfBlockX,
+                                                                 nObsConfirmatory, nameTest = nomAuxPru, 
+                                                                 typeSem = flag, outPathPbaGraph, kk, 
+                                                                 verDataIn)
+              }
               
-
-
-              return(auxAnalisis)
-            }
-          }
-     return(object)    
-    })
+              # # Guardando resultados 
+              saveResult(object, listResults)
+              }
+            return(object)    
+          })
 
 ################################################################################
 # # Apply the confirmatory function to each test in controlData
 ################################################################################
-setMethod("outXLSX", "Exploratory", 
-function(object, srcPath = "."){
-   outPath  <- file.path(srcPath, outPath, "04Exploratorio")
-   wb <<- createWorkbook()
-   # # header style
-   csEnc <- CellStyle(wb) + Font(wb, isBold = TRUE) +
-   Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
-   
-   # # percentages style
-   csPor <- CellStyle(wb) + DataFormat("0.0%")
-   # # estilo de columnas que reportan la desviación estándar del por
-   csDs <- CellStyle(wb) + DataFormat("(0.0%)") +
-           Alignment(v = "VERTICAL_CENTER") + Border()
-   csDsE <- CellStyle(wb) + Alignment(v = "VERTICAL_CENTER", wrapText = TRUE) +
-            Border()              
-   # # estilo de columnas que reportan n
-   csN  <- CellStyle(wb) + DataFormat("0.000") + Font(wb, isItalic = TRUE)
-   csNE <- CellStyle(wb) + Font(wb, isItalic = TRUE)
-                 # # borde
-   csPC <- CellStyle(wb) + Border() +
-           Alignment(v = "VERTICAL_CENTER", wrapText = TRUE)
-   # # fuente en negrilla
-   csNeg <- CellStyle(wb) + Font(wb, isBold = TRUE)
-   # # Columna centrada
-   cen  <- CellStyle(wb) + Alignment(h="ALIGN_CENTER")              
-   namesSheet <- c('Unidimensional', 'Multidimensional',
-                   'MultidimensionalNC', 'Bifactorial')             
-   
-   # # Guardando Salidas en Excel
-   summarys  <- list(sumModUni = sumModUni, sumModMult = sumModMult,
-                     sumModMultNR = sumModMultNR, sumModBifa = sumModBifa)
-   outGraphs <- c(outGraphUni, outGraphMult, outGraphMultNR, outGraphBifa)
-   outFits   <- data.frame(outFitMeasUni, outFitMeasMult,
-                          outFitMeasMultNR, outFitMeasBifa)
-   CreateExcel('Items', summarys, outGraphs, outFits, model = FALSE,
-               items = TRUE, outfit = FALSE)
-   mapply(CreateExcel, namesSheet,  summarys, outGraphs, outFits,
-           model = TRUE, items = FALSE, outfit = FALSE)
-   CreateExcel('Fits',  summarys, outGraphs, outFits, model = FALSE,
-               items = FALSE, outfit = TRUE)
-   
-   outFile <- file.path(outPathPba, ".xlsx", sep = '')
-   xlsx::saveWorkbook(wb, file = outFile)
-   cat("..... Salida en ", outFile, '\n')
-})
+setMethod("outXLSX", "Confirmatory", 
+          function(object, srcPath = "."){
+            outPath  <- file.path(outPath, "05Confirmatorio")
+            wb <<- createWorkbook()
+            
+            # # version of input dictionary
+            verDataIn <- object@test@verInput 
+            load(file.path(srcPath, object@outFile$pathRdata))
+            pruebasRead <- names(object@datAnalysis)
+            
+            for (kk in pruebasRead) {
+              
+              auxPru <- gsub("(::|\\s)","_", kk)
+              
+              # # Number of observations
+              nObsConfirmatory <- nrow(object@datAnalysis[[kk]]$datos)
+              
+              # # version comentario
+              versionComment <- paste0("Corrida Analisis Confirmatorio --", 
+                                       object@test@nomTest, "--\n")   
+              namesSheet <- c("flagUni" = 'Unidimensional', "flagMultiC" = 'Multidimensional',
+                              "flagMultiNC" = 'MultidimensionalNC', "flagBiFac" = 'Bifactorial')             
+              
+              # # Excluir modelos NO convergencia
+              indModelos <- sapply(listResults[[kk]], function(x) class(x$outFitMeas)) != "try-error"
+              listResults[[kk]] <- listResults[[kk]][indModelos]
+              
+              # # Guardando Salidas en Excel
+              summarys  <- lapply(listResults[[kk]], function(x) x$sumModMult)
+              outGraphs <- sapply(listResults[[kk]], function(x) x$outGraph)
+              outFits   <- data.frame(lapply(listResults[[kk]], function(x) x$outFitMeas))
+              namesSheet <- namesSheet[names(summarys)]
+              createExcelCon('Items', summarys, outGraphs, outFits, model = FALSE,
+                             nObsConfirmatory = nObsConfirmatory, items = TRUE, outfit = FALSE, 
+                             object = object, kk=kk, versionComment= versionComment)
+              mapply(createExcelCon, namesSheet,  summarys, outGraphs, outFits,
+                     MoreArgs = list(model = TRUE, items = FALSE, outfit = FALSE, object = object, 
+                                     kk=kk, nObsConfirmatory = nObsConfirmatory, 
+                                     versionComment= versionComment))
+              createExcelCon('Fits',  summarys, outGraphs, outFits, model = FALSE, tColumns = namesSheet,
+                             items = FALSE, outfit = TRUE, object = object, kk=kk,
+                             nObsConfirmatory =nObsConfirmatory, versionComment= versionComment)
+              outFile <- file.path(outPathPba, paste("05Confirmatorio_", kk,"_V", 
+                                                     verDataIn, ".xlsx", sep = ''))
+              xlsx::saveWorkbook(wb, file = outFile)
+              cat("..... Salida en ", outFile, '\n')
+            }
+          })
 
-setMethod("outHTML", "Exploratory", 
-function(object, srcPath = "."){
-  print("En construcción")
-})
+setMethod("outHTML", "Confirmatory", 
+          function(object, srcPath = "."){
+            print("En construcción")
+          })

@@ -144,6 +144,15 @@ setMethod("codeAnalysis", "Filtros",
         sospPrueb <- sospechosos
       }
       print(str(sospPrueb))
+      
+      # # Exclusion de colados 
+      datSblq[, indColados := 0]
+      if ("colados" %in% names(getParams(object))) {
+        pathColados <- file.path(inPath, getParams(object)$colados)
+        colados <- read.delim(pathColados, colClass="character")
+        datSblq[SNP %in% colados[,"SNP"], indColados := 1]
+      } 
+      
       datSblq[!SNP %in% sospPrueb[,"SNP1"], indCopia := 0]
       datSblq[SNP %in% sospPrueb[,"SNP1"], indCopia := 1]
      
@@ -180,9 +189,9 @@ setMethod("codeAnalysis", "Filtros",
 
       # # Indicadora global
       if (!object@param$flagNOESTU){ 
-        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indNE > 0, 1, 0)]
+        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indNE + indColados > 0, 1, 0)]
       } else {
-        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP > 0, 1, 0)]
+        datSblq[, indTOTAL := ifelse(indCopia + indNENP + indOMI + indNP + indColados> 0, 1, 0)]
       }
       
       datSblq[, indInclu := ifelse(indTOTAL == 0, 1, 0)]
@@ -196,7 +205,9 @@ setMethod("codeAnalysis", "Filtros",
       tabResumen <- datSblq[, lapply(.SD,sum), .SDcols = grep("ind.+", 
       	                   names(datSblq), value = TRUE)]
       tabResumen <- t(data.frame(tabResumen))
-      tabResumen <- data.frame("Descripción" = c("Evaluados Sospechosos de Copia",
+      tabResumen <- data.frame("Descripción" = c(
+                      "Evaluados que no pertenecen al Examen",      	              
+                      "Evaluados Sospechosos de Copia",
       	              "Evaluados que no son estudiantes",
                       "Evaluados que no estuvieron presentes",
                       "Evaluados que no respondieron al menos el 50% de la prueba",                      

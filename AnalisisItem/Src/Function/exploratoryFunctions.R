@@ -95,10 +95,14 @@ MakeCorrelation <- function(kkBlock, outPathSamPba, verDataIn,
                         verDataIn, ".RData"))
    if (!file.exists(auxData)) {  
       # # Select Exploratory or Confirmatory
-      set.seed(as.numeric(semilla))     
-      isExploratory <- sample(x = rownames(kkBlock), 
-                              size = ceiling(nrow(kkBlock) * tamMue))
-      indSelected   <- ifelse(flagExplo, -as.numeric(isExploratory))
+      set.seed(as.numeric(semilla))
+      if (tamMue != 1) {
+        isExploratory <- sample(x = rownames(kkBlock), 
+                                size = ceiling(nrow(kkBlock) * tamMue))
+        indSelected   <- ifelse(flagExplo, as.numeric(isExploratory), -as.numeric(isExploratory))
+      } else {
+        indSelected   <- 1:nrow(kkBlock)
+      }
       kkBlockSAM    <- kkBlock[indSelected, varId]
       rownames(kkBlockSAM) <- kkBlock[indSelected, "SNP"]
       nObs       <- nrow(kkBlockSAM)

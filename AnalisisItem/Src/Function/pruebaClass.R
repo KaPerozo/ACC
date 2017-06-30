@@ -556,7 +556,7 @@ analyzeTests <- function(vecJson, anUpdate = NULL, testUpdate = NULL,
   require(jsonlite)
   listTests <- list() 
   for (fileJson in vecJson) {
-     readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
+    readJson <- fromJSON(fileJson, simplifyVector = TRUE, 
                           simplifyDataFrame = FALSE, 
                           simplifyMatrix = FALSE)
      # # Comprobando si existe nombre para la salida

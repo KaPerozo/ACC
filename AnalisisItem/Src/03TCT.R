@@ -263,7 +263,7 @@ function(object, srcPath = "."){
        listResults[[auxPru]]$fileXLSX <- outFile
        saveResult(object, listResults, srcPath)
     }
-    saveWorkbook(wb, file = outFile)
+    xlsx::saveWorkbook(wb, file = outFile)
     cat("Termino Salida: ", outFile, "\n")
   }
 })

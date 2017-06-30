@@ -8,7 +8,7 @@
 # # Description: Función creada para definar la clase prueba, la clase análisis y
 # #              reporte prueba para las definir las funciones de análisis de item.
 # #
-# # Outputs: Funcio nes para crear objetos y metodos
+# # Outputs: Funciones para crear objetos y metodos
 # #
 # # File history:
 # #   20160302: Creation
@@ -33,6 +33,7 @@ source(file.path(funPath, "pruebaClass.R"))
 source("00Filtros.R")
 source("03TCT.R")
 source("04Exploratorio.R")
+source("05Confirmatorio.R")
 source("06IRT.R") 
 
 ################################################################################

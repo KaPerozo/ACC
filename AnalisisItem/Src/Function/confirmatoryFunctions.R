@@ -20,7 +20,9 @@
 ##############################################################
 # # Function to make SEM analysis
 ##############################################################
-generateConfirmatory <- function(flagUni, flagCor, flagBiFac, nameTest = "Constructo") {
+genConfirmatory <- function(dictVarPrueba, corConfBlockX, nObsConfirmatory,
+                            nameTest = "Constructo", typeSem = "flagUni", 
+                            outPathPbaGraph, kk, verDataIn) {
    # # Make exploratory analisis
    # #
    # # Arg:
@@ -31,22 +33,25 @@ generateConfirmatory <- function(flagUni, flagCor, flagBiFac, nameTest = "Constr
    # #  the variable after recode
    # #  levels of variable    
 
-   if (flagUni & flagCor) {
-     stop("_______ERROR________ Debe solo existir una bandera prendida", 
-          "'flagUni' (Unidimensional) o 'flagCor' (Multidimensional", 
-          "Correlacionado)\n")
-   }
-   flagCor <- ifelse(flagBiFac, TRUE, FALSE)
+   # # Categories wich are Rasch Models
+   codesRasch = c('01', '02')
+   flagUni     <- typeSem == "flagUni"
+   flagMultiC  <- typeSem == "flagMultiC"
+   flagMultiNC <- typeSem == "flagMultiNC"
+   flagBiFac   <- typeSem == "flagBiFac"
+   flagCor <- ifelse(flagBiFac | flagMultiC, TRUE, FALSE)
 
-   blockStruc         <- dictVarPrueba[, c("idx", "indice")]           
+   blockStruc         <- dictVarPrueba[, c("idx", "subCon")]           
    if (flagUni) {
-     blockStruc[, 'indice'] <- nameTest
+     blockStruc[, 'subCon'] <- nameTest
+   } else {
+     blockStruc[, 'subCon'] <- paste0("F", blockStruc[, 'subCon'])
    }               
    names(blockStruc)  <- c("indicator", "factor")
    structureBlock <- GenerateStructure(blockStruc)
    
    # # Check if any index is defined under a Rasch model and fix its factor loadings to one
-   dicRasch        <- subset(dictVarPrueba, codMod %in% codesRasch)[, c("idx", "indice")]
+   dicRasch        <- subset(dictVarPrueba, codMod %in% codesRasch)[, c("idx", "subCon")]
    names(dicRasch) <- c("indicator", "factor")
    if (nrow(dicRasch) > 0) {
      fixedStructBlock <- data.frame(dicRasch, loading = 1)
@@ -58,9 +63,10 @@ generateConfirmatory <- function(flagUni, flagCor, flagBiFac, nameTest = "Constr
    # # Generate factor model
    fixStructBlock <- factorStructure2LavaanModel(structureBlock,
                                                  fixedLoadings = fixedModBlock)
+   lenghtIndices       <- length(fixStructBlock)
    if (flagBiFac){
      fixStructBlock[lenghtIndices+1] <- paste(nameTest , "=~",
-                                              paste(names(fixStructBlock),
+                                              paste(names(structureBlock),
                                               collapse = " + "))
    }
    # # Run dimensional model
@@ -70,25 +76,24 @@ generateConfirmatory <- function(flagUni, flagCor, flagBiFac, nameTest = "Constr
                    std.lv = TRUE, estimator = "ML",
                    orthogonal = flagCor & !flagUni))
 
-   labelAux <- ifelse(flagUni, "uniG", ifelse(flagCor & !flagBiFac, "MultNCG"), 
-                      ifelse(flagBiFac, "bifaG", "MultG"))
+   labelAux   <- paste0(gsub("flag", "", typeSem), "Gr")
    sumModMult <- parameterEstimates(modBlock)
    outGraph   <- file.path(outPathPbaGraph, paste0(labelAux, "_", kk, "_",  
-                             versionOutput, sep = ''))
+                           verDataIn, sep = ''))
    if (flagBiFac) {
-     grapSE <- try(semPaths(modBifactorialBlock, "std", edge.label.cex=0.5,
+     grapSE <- try(semPaths(modBlock, "std", edge.label.cex=0.5,
                    curvePivot = FALSE, style = "lisrel", rotation = 4,
                    layout = "tree2", edge.color = "black",
                    optimizeLatRes = FALSE, sizeLat = 5,
-                   filetype = kExt, intStyle = "single",
+                   filetype = "png", intStyle = "single",
                    arrowAngle = pi/16, sizeMan = 5,
                    filename = outGraph,
-                   nCharNodes = max(nchar(names(confkkBlockX)))))
+                   nCharNodes = max(nchar(names(corConfBlockX)))))
    } else {
      grapSE <- semPaths(modBlock, "std", style = "OpenMx", sizeMan = 7,
                         edge.label.cex=0.8, curvePivot = TRUE, layout = "circle",
-                        edge.color = "black", filename = outGraphMult, filetype =
-                        "png", nCharNodes = ncol(corConfBlockX))))
+                        edge.color = "black", filename = outGraph, filetype =
+                        "png", nCharNodes = ncol(corConfBlockX))
    }
    outFitMeas <- try(MakeSummary(modBlock))
    return(list('sumModMult' = sumModMult, 'outGraph' = outGraph, 'outFitMeas' = outFitMeas))
@@ -98,9 +103,33 @@ generateConfirmatory <- function(flagUni, flagCor, flagBiFac, nameTest = "Constr
 # # Function to create a sheet in exploratory output analysis
 ##############################################################
 
-CreateExcel <-  function(nameSheet, summary, outGraph, 
-                         outFits, items, model,
-                         outfit){             
+createExcelCon <-  function(nameSheet, summary, outGraph, nObsConfirmatory,
+                            outFits, items, model, outfit, object, kk, 
+                            versionComment, tColumns){             
+
+  # # header style
+  csEnc <- CellStyle(wb) + Font(wb, isBold = TRUE) +
+  Border(pen = "BORDER_DOUBLE") + Alignment(h = "ALIGN_CENTER")
+     
+  # # percentages style
+  csPor <- CellStyle(wb) + DataFormat("0.0%")
+  # # estilo de columnas que reportan la desviacion estandar del porcentaje
+  csDs <- CellStyle(wb) + DataFormat("(0.0%)") +
+       Alignment(v = "VERTICAL_CENTER") + Border()
+  csDsE <- CellStyle(wb) + Alignment(v = "VERTICAL_CENTER", wrapText = TRUE) +
+  Border()      
+     
+  # # estilo de columnas que reportan n
+  csN  <- CellStyle(wb) + DataFormat("0.000") + Font(wb, isItalic = TRUE)
+  csNE <- CellStyle(wb) + Font(wb, isItalic = TRUE)
+  # # borde
+  csPC <- CellStyle(wb) + Border() +
+  Alignment(v = "VERTICAL_CENTER", wrapText = TRUE)
+  # # fuente en negrilla
+  csNeg <- CellStyle(wb) + Font(wb, isBold = TRUE)
+  # # Columna centrada
+  cen  <- CellStyle(wb) + Alignment(h="ALIGN_CENTER")  
+
   # # nameSheet
   assign(nameSheet, xlsx::createSheet(wb, sheetName = nameSheet))
   
@@ -129,21 +158,21 @@ CreateExcel <-  function(nameSheet, summary, outGraph,
     # # Adición de la gráfica
     nRow <- nrow(summaryUni)
     
-    addPicture(file = paste(outGraph, kExt, sep = '.'),
+    addPicture(file = paste(outGraph, "png", sep = '.'),
                sheet = get(nameSheet), scale = 1.3,
                startRow = nRow + 9, startColumn = 1)
   }
   
   # # Salida del resúmen de los items
   if(items) {
-    varKeepDict <- c('id', 'indice', 'etiqu')
-    if (object@exam == "SABER359") {
+    varKeepDict <- c('id', 'subCon', 'etiqu')
+    if (object@test@exam == "SABER359") {
       dictVarPruebaInd[, "etiqu"] = "No disponible"
     }
-    confItemIndex <- dictVarPruebaInd[, varKeepDict]
+    confItemIndex <- object@datAnalysis[[kk]]$dictionary[, varKeepDict]
     isVacio <- confItemIndex[, 'etiqu'] == '' | is.na(confItemIndex[, 'etiqu'])
     if (any(isVacio)) {
-      confItemIndex[isVacio, 'etiqu'] <- confItemIndex[isVacio, 'instr']
+      confItemIndex[isVacio, 'etiqu'] <- "NO Subconjunto"
     }
     
     addDataFrame(confItemIndex, sheet = get(nameSheet), startRow = 7,
@@ -162,13 +191,7 @@ CreateExcel <-  function(nameSheet, summary, outGraph,
     tableAdjust  <- data.frame(outFits)
     if(ncol(tableAdjust) != 1) {
       
-      if (controlAnal@param$flagBiFac) {
-        colnames(tableAdjust) <- c('Unidimensional', 'Multidimensional',
-                                   'MultidimensionalNC', 'Bifactorial')
-      } else {
-        colnames(tableAdjust) <- c('Unidimensional', 'Multidimensional',
-                                   'MultidimensionalNC')
-      }
+    colnames(tableAdjust) <- tColumns
       
       # # Adición de la tabla de resumen del modelo
       nRow <- nrow(tableAdjust)
@@ -201,18 +224,20 @@ CreateExcel <-  function(nameSheet, summary, outGraph,
     }
   }
   
-  namesPrueba <- subset(pruebasDesc, codigo_prueba == kk,
-                        select = c(codigo_prueba, prueba))
-  namesPrueba[, 'nItems'] <-  nrow(dictVarPruebaInd)
-  
+  namesPrueba <- unique(subset(object@datAnalysis[[kk]]$dictionary, 
+		                !is.na(prueba),
+                        select = c(codigo_prueba, prueba)))
+  namesPrueba[, 'nItems'] <-  nrow(object@datAnalysis[[kk]]$dictionary)
   criterios1   <- c('Código de Prueba', 'Datos de Análisis',
                     'Uso criterio Omisiones', 'Número de ítems',
                     'Tipo de Análisis')
-  
-  valores1     <-  data.frame(valor = c(namesPrueba[, 'codigo_prueba'],
-                                        ifelse(isCensal, 'Censal', 'Muestra Nacional'),
+  kOmissionThreshold <- object@param$kOmissionThreshold
+  isOmissDel   <- kOmissionThreshold <= 1 & kOmissionThreshold > 0
+  valores1     <-  data.frame(valor = c(namesPrueba[, 'codigo_prueba'], 
+                                        'Censal',
                                         ifelse(isOmissDel, 'Sí', 'No'),
-                                        namesPrueba[, 'nItems'], useMatrixCorr ))
+                                        namesPrueba[, 'nItems'], 
+                                        "Polychoric"))
   cabBlock1    <- data.frame(criterios1, valores1)
   addDataFrame(cabBlock1, sheet = get(nameSheet), startRow = 1,
                startColumn = 1, row.names = FALSE,
@@ -221,13 +246,10 @@ CreateExcel <-  function(nameSheet, summary, outGraph,
   criterios2 <- c('Prueba','n Análisis',
                   'Criterio para tratamiento de omisiones',
                   'Tratamiento de Valores Ausentes', 'Comentario')
-  
   valores2   <-  data.frame(valor = c(namesPrueba[, 'prueba'],
-                    nObsConfirmatory, kOmissionThreshold,
-                    versionComment, useCor))
-  
+                           nObsConfirmatory, kOmissionThreshold,
+                           versionComment, object@param$useCor))
   cabBlock2  <- data.frame(criterios2, valores2)
-  
   addDataFrame(cabBlock2, sheet = get(nameSheet), startRow = 1,
                startColumn = 3, row.names = FALSE,
                col.names = FALSE, colStyle = list('1' = csNeg))
