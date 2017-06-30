@@ -66,13 +66,14 @@ function(object){
     source(file.path(funPath, "log.R"))  # # log
     source(file.path(funPath, "plotCMC.R"))
 
-    # # Load libraries
-    require(psych)  # # 1.1.10
-    require(ggplot2)  # # 0.9.3.1
-    require(gtools)  # # 3.2.1
-    require(LaF)  # # 0.5
-    require(data.table)  # # 1.8.10
-    require(xlsx)  # # 0.5.5
+    # # Load libraries    
+    library(CMC)
+    library(psych)  # # 1.1.10
+    library(ggplot2)  # # 0.9.3.1
+    library(gtools)  # # 3.2.1
+    library(LaF)  # # 0.5
+    library(data.table)  # # 1.8.10
+    library(xlsx)  # # 0.5.5
 
     # # version with dict V00 and data _2014_01_28_17_10_35
     versionOutput  <- object@verSalida
@@ -268,11 +269,13 @@ function(object, srcPath = "."){
 })
 
 setMethod("outHTML", "TCT", 
-function(object, srcPath = "."){
+function(object, srcPath = ".", pruebasRead = NULL){
   # # Identificando Pruebas
   outPathPba <- file.path(srcPath, outPath, "03TCT")  
   load(file.path(srcPath, object@outFile$pathRdata))
-  pruebasRead <- names(object@datAnalysis)
+  if (is.null(pruebasRead)) {
+    pruebasRead <- names(object@datAnalysis)
+  }
   pruebasRead <- split(pruebasRead, f = gsub("(.+)::(.+)", "\\1", pruebasRead)) 
   auxPru      <- lapply(pruebasRead, function(x) gsub("(::|\\s)","_", x))
   auxNombres  <- names(listResults)

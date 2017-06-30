@@ -893,7 +893,7 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
 # # Función para unir diferentes bases de anclaje
 ################################################################################
 
-getAnchors <- function(fileAncla, formAncla){
+getAnchors <- function(object, fileAncla, formAncla){
      # # Comprobacion de parametros
      if (length(fileAncla) != length(formAncla)) {
        stop("La longitud de 'AnclaRdata' y de 'formAncla' no es la misma")

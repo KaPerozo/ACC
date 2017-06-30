@@ -205,7 +205,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   # # Numero total de alertas
   x[, nAlertas := sum(FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGCHI2,
                       FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN, FLAGDIFDIS,
-                      FLAGCV, FLAGAZAR, na.rm = TRUE), by = "item"]
+                      FLAGDIF, FLAGAZAR, na.rm = TRUE), by = "item"]
 
   # # Redondeando 3 decimales
   cols <- c("dif_NEW", "eedif", "disc", "eedisc", "azar", "eeazar", "maxINFO")
@@ -232,14 +232,14 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 item, SUBBLOQUE, COMPONENTE, COMPETENCIA, keyItem,                                     # 11  - 15
                 "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 16 - 21
                 'disc' = ifelse(is.na(disc), "NA", paste0(disc, " (", eedisc, ") ")),                                             # 22
-                'dif'  = ifelse(is.na(dif_NEW), "NA", ifelse(eedif_NEW != "NA%", paste0(dif_NEW, " (", eedif_NEW, ") "), dif_NEW)), dir_OP, dir_ICC,                   # 23 - 25
+                'dif'  = ifelse(is.na(dif_NEW), "NA", ifelse(eedif_NEW != "NA", paste0(dif_NEW, " (", eedif_NEW, ") "), dif_NEW)), dir_OP, dir_ICC,                   # 23 - 25
                 'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 26
                 'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 27
                 'Chis' = ifelse(is.na(chi2), "NA", paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2)),                   # 28
                 FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 29 - 37
                 FLAGOUTFIT, FLAGPROP, FLAGDIFDIS, FLAGAZAR, FLAGCHI2,                                  # 38 - 42
                 'azar' = ifelse(is.na(azar), "NA", paste0(azar, " (", eeazar, ") ")),                                             # 43
-                'posReporte' = match(x$item, names(itObs)) - 1, FLAGINFO, FLAGCV)]                                     # 44 - 46
+                'posReporte' = match(x$item, names(itObs)) - 1, FLAGINFO, FLAGDIF)]                                     # 44 - 46
                 #'diffRescal' = ifelse(is.na(diffRescal), "NA", paste0(diffRescal, " (", eediffRescal, ") ")))]  # 47
   x[, canName := 8 - (is.na(TRIED) + is.na(RIGHT) + is.na(PCT) + is.na(BISERIAL) + 
                  is.na(disc) + (dif == "NA") + is.na(azar) + (Chis == "NA"))]  # 47
@@ -330,7 +330,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
       FLAGAZAR   = d[41];
       FLAGCHI2   = d[42];
       FLAGINFO   = d[45];
-      FLAGCV     = d[46];
+      FLAGDIF     = d[46];
       titulos = '<table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" style=\"padding-left:95px;\" width=\"100%\" >'+\n",
               "'<tr>'+
                 '<th>Nombre</th>'+
@@ -371,7 +371,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
            imprimirDato(d[20], 'Correlaci&oacute;n biserial excluyendo &iacute;tem', FLAGCORR, 0) +           
            imprimirDato(d[21], 'Correlaci&oacute;n biserial', FLAGBISE, 0) +               
            imprimirDato(d[22], 'Discriminaci&oacute;n', FLAGA, 0) +               
-           imprimirDato(d[23], 'Dificultad', FLAGB, FLAGCV) +
+           imprimirDato(d[23], 'Dificultad', FLAGDIF, FLAGB) +
            imprimirDato(d[43], 'Azar', FLAGAZAR, 0) +   
            imprimirDato(d[28], 'estad&iacute;stico &Chi;<sup>2</sup>', FLAGCHI2, 0) +   
     '<tr>'+
