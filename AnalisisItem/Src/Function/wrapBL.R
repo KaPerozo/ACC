@@ -19,6 +19,32 @@
 ################################################################################
 
 ################################################################################
+# # Computes reliability for one-dimensional WLEs Tomado de https://github.com/cran/TAM/
+################################################################################
+WLErel_exclude_missings <- function(theta, error, w)
+{
+	ind <- which( ! is.na(theta) )
+	theta <- theta[ind]
+	error <- error[ind]
+	w <- w[ind]
+	#--- OUTPUT
+	res <- list( theta=theta, error=error, w=w)
+	return(res)
+}
+
+WLErel <- function(theta, error, w = rep(1,length(theta) )){
+	res <- WLErel_exclude_missings(theta=theta, error=error, w=w)
+	theta <- res$theta
+	error <- res$error
+	w <- res$w
+    v1 <- weighted_var( x = theta , w = w  )
+    v2 <- weighted_mean( x = error^2 , w = w  )
+    # WLE_Rel = ( v1 - v2 ) / v1 = 1 - v2 / v1
+    rel <- 1 - v2 / v1
+	return(rel)
+}
+
+################################################################################
 # # Function for reading Parscale output file
 ################################################################################
 
@@ -62,15 +88,14 @@ readPH2CHI <- function(fileName, filePath = "./"){
   # #  filePath: The file path
   # #
   # # Ret:
-  # #
-  require(dplyr)
+  # #  
   inFile <- file.path(filePath, fileName)
   data   <- readLines(inFile)
   linea  <- max(grep(pattern = "LARGEST CHANGE", data))
   indPri <- grep("ITEM PARAMETERS AFTER CYCLE", data)
   data  <- data[(max(indPri) + 5):(linea - 4)]
   sp    <- seq(from = 3, to = (3 * (length(data) + 1) / 3 - 2), by = 3) 
-  tab <- gsub("\\n", "", data[-sp] %>% paste(collapse = "\n"))
+  tab <- paste(data[-sp], collapse = "")
   tab <- data.table('Original' = strsplit(tab, ") I")[[1]])
   tab <- tab[, data.table::tstrsplit(Original, "|", fixed=TRUE)]
   tab <- tab[, list('item'  =  gsub("^(I)(.*)", "\\2", gsub(" ", "", V1)), 
@@ -550,7 +575,11 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   }
 
   if (!is.null(datAnclas)) {
+    flagEMPIRICAL <- TRUE
     printFix(vecFix = indPosi$Fix, commandFile)
+    if (all(indPosi$Fix == 1)) {
+      flagEMPIRICAL <- FALSE
+    }
   }
   
   cat("      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
@@ -595,7 +624,11 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # # CALIB
   cat(">CALIB \n", file = commandFile, append = TRUE)
   if (!is.null(datAnclas)) {
-    cat("       NOADJUST, \n", file = commandFile, append = TRUE)
+    if (flagEMPIRICAL) {
+      cat("       EMPIRICAL, \n", file = commandFile, append = TRUE)
+    } else {
+      cat("       NOADJUST, \n", file = commandFile, append = TRUE)
+    }
   }
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
@@ -642,19 +675,19 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   }
 
   # # Escribiendo bats
-  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
+  cat(paste('"', gsub("/", "\\\\", file.path(binPath, "BLM1.eje")), '"', 
             " ", runName, " > ", paste0(runName, ".log1"),
             "\n", sep = ""), file = gsub("\\.bat", "_f1.bat", batDir))
 
-  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM1.eje")),
+  cat(paste('"', gsub("/", "\\\\", file.path(binPath, "BLM1.eje")), '"',
             " ", runName, " > ", paste0(runName, ".log1"),
             "\n", sep = ""), file = batDir)
 
-  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM2.eje")),
+  cat(paste('"', gsub("/", "\\\\", file.path(binPath, "BLM2.eje")), '"',
             " ", runName, " > ", paste0(runName, ".log2"),
             "\n", sep = ""), file = batDir,
       append = TRUE)
-  cat(paste(gsub("/", "\\\\", file.path(binPath, "BLM3.eje")),
+  cat(paste('"', gsub("/", "\\\\", file.path(binPath, "BLM3.eje")), '"',
             " ", runName, " > ", paste0(runName, ".log3"),
             "\n", sep = ""), file = batDir,
       append = TRUE)
@@ -734,10 +767,149 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     if(sizeSCO > 0 & all(auxTCT[, "BISERIAL"] > 0)){
       break
     }
+
+    if (iiCor > 25) {
+      break
+    }
     iiCor <- iiCor + 1
   }
   # if (runProgram) {
   #   system("WinXP-RUNBILOG.bat")
   # }
+  if (!is.null(datAnclas)) {
+    cat(".... Se ajustara los parametros de los ítems\n")
+    consFCIP <- fixFCIP(datAnclas, commentFile, outPath)
+    cat(".... Los parametros de tranformación son:\n")
+    print(consFCIP)
+  } else {
+    consFCIP <- NULL
+  }
   setwd(srcPath)
+  return(consFCIP)
+}
+
+fixFCIP <- function(parHisto, nameActual, outPath) {
+  # # Encontrar constantes de escalamiento para ajustar metodo EMPIRICAL - BILOG
+  # #
+  # # Arg:
+  # #  parHisto:   Data frame con las calibraciones historicas "listResultsAN"
+  # #  nameActual: Nombre de la forma que se quiere leer
+  # #  outPath:    Archivo de salida con las constantes
+  # #
+  # # Ret:
+  # #
+  
+  # # Encontrando constantes
+  itemHis        <- data.table(parHisto[,c("item", "dif", "disc", "azar")])
+  itemDiffFile   <- paste0(nameActual, ".PAR")
+  parActual <- data.table(try(ReadBlParFile(itemDiffFile, outPath)))
+  parActual <- merge(itemHis, parActual, all.y = TRUE, by = "item", 
+                     suffixes = c(".base",".new"))
+  parActual[, A := disc.new / disc.base ]
+  parActual[, B := dif.base - A * dif.new]
+  parActual[, A := parActual[!is.na(A), mean(A)]]
+  parActual[, B := parActual[!is.na(B), mean(B)]]
+
+  # # Escalar parametros y fijar items de anclaje
+  parActual[, disc.equa := disc.new / A]
+  parActual[, dif.equa  := A * dif.new + B]
+  parActual[, azar.equa := azar.new]
+  obsAnclas <- parActual[, sum(abs(dif.equa - dif.base) + 
+                         abs(disc.equa - disc.base), na.rm = TRUE)]
+  if (obsAnclas > 0.001) {
+    stop("Existe unas diferencias en los parametros de anclas de ", str(obsAnclas))
+  }
+  parActual[!is.na(disc.base), disc.equa := disc.base]
+  parActual[!is.na(dif.base),  dif.equa := dif.base]
+  parActual[!is.na(disc.base), azar.equa := azar.new]
+
+  # # Lectura de archivo .PAR original
+  itemDiffFile <- file.path(outPath, itemDiffFile)
+  auxParEMPI   <- readLines(itemDiffFile)
+
+  # # Consolidar nuevo archivo de parametros
+  consEscala <- unique(parActual[, list(prueba, A, B)])
+  save(parActual, consEscala, file = gsub("(.+)\\.PAR", "\\1_constantes.Rdata", itemDiffFile))
+
+  for(column in c('disc.new', 'dif.new', 'azar.new', 'disc.equa', 'dif.equa', 'azar.equa')){
+    if (any(is.na(parActual[, column, with = FALSE]))) {
+      stop("El calculo o algunos de los parametros es NA ")      
+    }
+    if (column %in% c('disc.equa', 'dif.equa', 'azar.equa')) {
+      charCol <- sprintf("%.5f", as.numeric(parActual[[column]]))
+    } else {
+      charCol <- sprintf("%.5f", abs(as.numeric(parActual[[column]])))
+    }
+    parActual[[column]] <- charCol
+  }
+  parActual[, item := paste0("(", item, ")")]
+  parActual <- data.frame(parActual)
+  parActual[, "pat"]  <- apply(parActual[, c('item', 'disc.new', 'dif.new', 'azar.new')], 
+                               1, paste, collapse = "(.+)(\\s|\\-)")  
+  fixSigno <- ifelse(substr(parActual[, "dif.equa"], 1,1) == "-", "", " ")
+  parActual[, "gsub"] <- paste0('\\1\\2 ', parActual[, "disc.equa"], '\\4', 
+                               fixSigno, parActual[, "dif.equa"], '\\6 ', 
+                               parActual[, "azar.equa"])     
+  for (ii in 1:nrow(parActual)) {
+    auxParEMPI <- gsub(parActual[ii, "pat"], parActual[ii, "gsub"], auxParEMPI)
+  }
+  file.copy(itemDiffFile, gsub("\\.PAR", ".EMPIRICAL", itemDiffFile))
+  cat(auxParEMPI, file = itemDiffFile, sep = "\n")
+
+  # # Comprobar anclas
+  comparaFile <- file.path(outPath, paste("salidas/", nameActual, "_valida.xlsx", sep = ""))
+  parActual <- try(ReadBlParFile(itemDiffFile, outPath))
+  comparaANC(parHisto = parHisto, parActual = parActual, outPath = comparaFile)
+  return(consEscala)
+}
+
+### Comprobar anclas
+ 
+comparaANC <- function(parHisto, parActual, outPath = "./" ){
+  
+  # # Comparacion de anclajes
+  # #
+  # # Arg:
+  # #  parHisto: Data frame con las calibraciones historicas "listResultsAN"
+  # #  parActual: Data frame con la lectura de un .PAR "itemParameters"
+  # #  outPath: Archivo de salida de la Comparacion
+  # #
+  # # Ret:
+  # #
+  # parHisto <- listResultsAN
+  # parActual <- itemParameters
+  itemHis <- data.table(parHisto[,c("item","dif", "disc", "azar")])
+  itemAct <- data.table(parActual[,c("item","dif", "disc", "azar")]) 
+  itemsComp <- merge(itemHis, itemAct, all = TRUE, 
+                     suffixes = c("Hist","Act"), by = "item")
+  itemsComp <- itemsComp[!is.na(difAct) , diferenciaDif := difHist - difAct]
+  itemsComp[, diferenciaAzar := azarHist - azarAct]
+  itemsComp[, diferenciaDisc := discHist - discAct]
+  verificaDif <- itemsComp[abs(diferenciaDif) > 0.01,]
+  verificaAzar <- itemsComp[abs(diferenciaAzar) > 0.01,]
+  verificaDisc <- itemsComp[abs(diferenciaDisc) > 0.01,]
+        
+  if(nrow(verificaDif) != 0){
+    cat("Hay diferencia en las anclas de los siguiente items \n")
+    print(verificaDif)
+    
+  }else{
+    cat("Ningun item presenta grandes cambio en Dificultad \n") 
+  }
+  if(nrow(verificaAzar) != 0){
+    cat("Hay diferencia en las anclas de los siguiente items \n")
+    print(verificaAzar)
+    
+  }else{
+    cat("Ningun item presenta grandes cambio en Azar \n") 
+  }
+  if(nrow(verificaDisc) != 0){
+    cat("Hay diferencia en las anclas de los siguiente items \n")
+    print(verificaDisc)
+    
+  }else{
+    cat("Ningun item presenta grandes cambio en Discriminacion \n") 
+  }
+  require(WriteXLS)
+  WriteXLS(itemsComp, ExcelFileName = outPath)
 }
