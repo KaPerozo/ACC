@@ -21,27 +21,53 @@
 ################################################################################
 # # Computes reliability for one-dimensional WLEs Tomado de https://github.com/cran/TAM/
 ################################################################################
+weighted_var <- function( x , w=rep(1,length(x) ) , method = "unbiased"  ){
+    ind <- which( ! is.na(x) )
+    x <- x[ind]
+    w <- w[ind]
+  dat <- data.frame("x" = x )   
+  res <- stats::cov.wt( x = dat , wt = w , cor =FALSE , center = TRUE ,
+              method = method )
+  res <- res$cov[1,1]
+  return(res) 
+  }
+
+# # standard deviation
+weighted_sd <- function( x , w=rep(1,length(x) ) , method = "unbiased"  ){
+  res <- sqrt( weighted_var(x=x, w=w, method=method) )
+  return(res)
+      }
+
+
+weighted_mean <- function( x , w=rep(1,length(x)) ){
+  ind <- ! is.na(x)
+  x <- x[ind]
+  w <- w[ind]
+  res <- sum( x * w ) / sum(w)
+  return(res)
+}
+
 WLErel_exclude_missings <- function(theta, error, w)
 {
-	ind <- which( ! is.na(theta) )
-	theta <- theta[ind]
-	error <- error[ind]
-	w <- w[ind]
-	#--- OUTPUT
-	res <- list( theta=theta, error=error, w=w)
-	return(res)
+  ind <- which( ! is.na(theta) )
+  theta <- theta[ind]
+  error <- error[ind]
+  w <- w[ind]
+  #--- OUTPUT
+  res <- list( theta=theta, error=error, w=w)
+  return(res)
 }
 
 WLErel <- function(theta, error, w = rep(1,length(theta) )){
-	res <- WLErel_exclude_missings(theta=theta, error=error, w=w)
-	theta <- res$theta
-	error <- res$error
-	w <- res$w
+  res <- WLErel_exclude_missings(theta=theta, error=error, w=w)
+  theta <- res$theta
+  error <- res$error
+  w <- res$w
     v1 <- weighted_var( x = theta , w = w  )
     v2 <- weighted_mean( x = error^2 , w = w  )
     # WLE_Rel = ( v1 - v2 ) / v1 = 1 - v2 / v1
     rel <- 1 - v2 / v1
-	return(rel)
+  return(rel)
 }
 
 ################################################################################
