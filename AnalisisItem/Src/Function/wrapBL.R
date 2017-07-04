@@ -914,8 +914,8 @@ comparaANC <- function(parHisto, parActual, outPath = "./" ){
   # #
   # parHisto <- listResultsAN
   # parActual <- itemParameters
-  itemHis <- data.table(parHisto[,c("item","dif", "disc", "azar")])
-  itemAct <- data.table(parActual[,c("item","dif", "disc", "azar")]) 
+  itemHis <- data.table(subset(parHisto, select = c("item", "dif", "disc", "azar")))  
+  itemAct <- data.table(subset(parActual, select = c("item", "dif", "disc", "azar"))) 
   itemsComp <- merge(itemHis, itemAct, all = TRUE, 
                      suffixes = c("Hist","Act"), by = "item")
   itemsComp <- itemsComp[!is.na(difAct) , diferenciaDif := difHist - difAct]
