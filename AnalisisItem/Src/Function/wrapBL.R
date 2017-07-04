@@ -606,6 +606,8 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     if (all(indPosi$Fix == 1)) {
       flagEMPIRICAL <- FALSE
     }
+  } else {
+    flagEMPIRICAL <- FALSE
   }
   
   cat("      TNAME = '", substr(gsub("_V.+", "", runName), 1, 8), "', \n",
@@ -656,6 +658,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       cat("       NOADJUST, \n", file = commandFile, append = TRUE)
     }
   }
+
   cat("       CYCLES = 500, \n", file = commandFile, append = TRUE)
   cat("       NEWTON = 30, \n", file = commandFile, append = TRUE)
   cat("       NQPT = ", nQuadPoints, ", \n", sep = "", file = commandFile, append = TRUE) 
@@ -722,7 +725,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   setwd(runPath)
   iiCor <- 1
   repeat{
-    system("WinXP-RUNBILOG.bat")
+    system("WinXP-RUNBILOG_f1.bat")
     file.copy(tctFileName, gsub("\\.TCT", paste0("_", iiCor - 1, ".TCT"), tctFileName))
 
     # # Identificando items malos
@@ -807,6 +810,13 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     consFCIP <- fixFCIP(datAnclas, commentFile, outPath)
     cat(".... Los parametros de tranformación son:\n")
     print(consFCIP)
+    if (flagEMPIRICAL) {
+      # # Cambiando EMPIRICAL por NOADJUST
+      auxBlm <- readLines(commandFile)
+      auxBlm <- gsub("EMPIRICAL", "NOADJUST", auxBlm)
+      cat(auxBlm, sep = "\n", file = commandFile)
+      system("WinXP-RUNBILOG.bat")
+    }
   } else {
     consFCIP <- NULL
   }
@@ -826,15 +836,15 @@ fixFCIP <- function(parHisto, nameActual, outPath) {
   # #
   
   # # Encontrando constantes
-  itemHis        <- data.table(parHisto[,c("item", "dif", "disc", "azar")])
+  itemHis        <- data.table(subset(parHisto, select = c("item", "dif", "disc", "azar")))
   itemDiffFile   <- paste0(nameActual, ".PAR")
   parActual <- data.table(try(ReadBlParFile(itemDiffFile, outPath)))
   parActual <- merge(itemHis, parActual, all.y = TRUE, by = "item", 
                      suffixes = c(".base",".new"))
   parActual[, A := disc.new / disc.base ]
   parActual[, B := dif.base - A * dif.new]
-  parActual[, A := parActual[!is.na(A), mean(A)]]
-  parActual[, B := parActual[!is.na(B), mean(B)]]
+  parActual[is.na(disc.base), A := parActual[!is.na(A), mean(A)]]
+  parActual[is.na(disc.base), B := parActual[!is.na(B), mean(B)]]
 
   # # Escalar parametros y fijar items de anclaje
   parActual[, disc.equa := disc.new / A]
