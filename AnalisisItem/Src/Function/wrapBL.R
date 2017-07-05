@@ -289,14 +289,13 @@ RunFromWN <- function(runPath, scriptPath) {
 
 RunBilog <- function (responseMatrix, runName, outPath = "./",
                       runPath = "./", weights = NULL, group = NULL,
-                      personIds = NULL, itemIds = NULL, guessing = FALSE,
+                      personIds = NULL, itemIds = NULL, 
                       nQuadPoints = 30, score = TRUE, personEstimation = "EAP",
                       logistic = TRUE, kD = NULL, dif = FALSE,
                       srcPath = "../src/", binPath = "../bin/", verbose = TRUE,
-                      commentFile = NULL,  calibFile = NULL,
-                      runProgram = TRUE, itNumber = NULL, NPArm = 2, 
+                      commentFile = NULL, runProgram = TRUE, itNumber = NULL, NPArm = 2, 
                       thrCorr = 0.05, datAnclas = NULL, flagSPrior = FALSE, 
-                      flagTPrior = FALSE, flagRASCH = FALSE){
+                      flagTPrior = FALSE, flagRASCH = FALSE, flagEMPIRICAL = !is.null(datAnclas)){
     
     # # This function generates a Parscale control file given the options in its
     # # arguments, runs it and reads the item parameters
@@ -321,13 +320,13 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     # #  binPath: path where the Parscale executables may be found
     # #  verbose: logical indicating whether to show or not function progres
     # #  commentFile: Title with information of Test
-    # #  calibFile: file name with the Parameter Calibration
     # #  runProgram:
     # #  NPArm: Number of parameters of the model
     # #  datAnclas: Data Frame with items parameters to estimate
     # #  flagSPrior:
     # #  flagTPrior:
     # #  flagRASCH: Perform RASCH 1PL Model
+    # #  flagEMPIRICAL: 
     # # Ret:
     # #  iPar: returns the estimated item parameters
     ################################################################################
@@ -494,11 +493,6 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   cat(">GLOBAL DFNAME = '", dataFileName, "', \n", sep = "", file = commandFile,
       append = TRUE)
   
-  if (!is.null(calibFile)) {
-    cat("       IFNAME = '", calibFile, "', \n", sep = "",
-        file = commandFile, append = TRUE)
-  }
-  
   if (!is.null(datAnclas)) {
     cat("        PRNAME = '", prFileName, "', \n", sep = "",
         file = commandFile, append = TRUE)
@@ -601,7 +595,6 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   }
 
   if (!is.null(datAnclas)) {
-    flagEMPIRICAL <- TRUE
     printFix(vecFix = indPosi$Fix, commandFile)
     if (all(indPosi$Fix == 1)) {
       flagEMPIRICAL <- FALSE
@@ -805,20 +798,26 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
   # if (runProgram) {
   #   system("WinXP-RUNBILOG.bat")
   # }
+  consFCIP <- NULL
   if (!is.null(datAnclas)) {
-    cat(".... Se ajustara los parametros de los ítems\n")
-    consFCIP <- fixFCIP(datAnclas, commentFile, outPath)
-    cat(".... Los parametros de tranformación son:\n")
-    print(consFCIP)
     if (flagEMPIRICAL) {
-      # # Cambiando EMPIRICAL por NOADJUST
-      auxBlm <- readLines(commandFile)
-      auxBlm <- gsub("EMPIRICAL", "NOADJUST", auxBlm)
-      cat(auxBlm, sep = "\n", file = commandFile)
-      system("WinXP-RUNBILOG.bat")
-    }
-  } else {
-    consFCIP <- NULL
+      cat(".... Se ajustara los parametros de los ítems\n")
+      consFCIP <- fixFCIP(datAnclas, commentFile, outPath)
+      cat(".... Los parametros de tranformación son:\n")
+      print(consFCIP)
+      # # Cambiando datAnclas por .PAR despues de la transformacion
+      listOri <- as.list(match.call())
+      itemPARFile <- paste0(commentFile, ".PAR")
+      listOri[["datAnclas"]] <- try(ReadBlParFile(itemPARFile, outPath))
+      listOri[["flagEMPIRICAL"]] <- FALSE
+      do.call(RunBilog, args = listOri[-1], envir = sys.frame(which = -1)) 
+  
+      # # # Cambiando EMPIRICAL por NOADJUST
+      # auxBlm <- readLines(commandFile)
+      # auxBlm <- gsub("EMPIRICAL", "NOADJUST", auxBlm)
+      # cat(auxBlm, sep = "\n", file = commandFile)
+      # system("WinXP-RUNBILOG.bat")
+    } 
   }
   setwd(srcPath)
   return(consFCIP)
@@ -864,7 +863,7 @@ fixFCIP <- function(parHisto, nameActual, outPath) {
   auxParEMPI   <- readLines(itemDiffFile)
 
   # # Consolidar nuevo archivo de parametros
-  consEscala <- unique(parActual[, list(prueba, A, B)])
+  consEscala <- unique(parActual[is.na(disc.base), list(prueba, A, B)])
   save(parActual, consEscala, file = gsub("(.+)\\.PAR", "\\1_constantes.Rdata", itemDiffFile))
 
   for(column in c('disc.new', 'dif.new', 'azar.new', 'disc.equa', 'dif.equa', 'azar.equa')){

@@ -277,7 +277,11 @@ setMethod("codeAnalysis", "IRT",
                             verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
                             commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
                             datAnclas = listResultsAN, flagTPrior =  object@param$flagTPrior,
-                            flagSPrior = object@param$flagSPrior)
+                            flagSPrior = object@param$flagSPrior, 
+                            weights = NULL, group = NULL, score = TRUE,             # sin Implementar
+                            personEstimation = "EAP", logistic = TRUE,  kD = NULL,  # sin Implementar
+                            dif = FALSE, itNumber = NULL, flagRASCH = FALSE         # sin Implementar
+                            )
         
         # Reading results of chi square test 
         itemPH2File <- paste(indexData, ".PH2", sep = "")

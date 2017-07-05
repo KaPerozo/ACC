@@ -853,6 +853,7 @@ publishRepo <- function(vecJson, pathDest, flagActualizar = FALSE){
 
        # # Copiando otros archivos
        file.copy(docPath, folder, recursive = TRUE, overwrite = flagActualizar)
+       file.copy(inPath, folder, recursive = TRUE, overwrite = flagActualizar)
        
      }
       
