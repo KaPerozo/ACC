@@ -68,7 +68,7 @@ IRT <- function(test, paramExp = NULL){
                        AnclaRdata = NULL, formAncla = "",
                        flagSPrior = FALSE, flagTPrior = FALSE,
                        mCentrar = NULL, sdCentrar = NULL, 
-                       minPun= NULL, maxPun = NULL)
+                       minPun= NULL, maxPun = NULL, thrCorr = 0.05)
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
@@ -275,7 +275,7 @@ setMethod("codeAnalysis", "IRT",
                             itemIds = paste0("I", dictVarPrueba$id), binPath = binPath,
                             runPath = file.path(outPath, 'corridas'),
                             verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
-                            commentFile = indexData, NPArm = auxNPAR, thrCorr = 0.05, 
+                            commentFile = indexData, NPArm = auxNPAR, thrCorr = object@param$thrCorr, 
                             datAnclas = listResultsAN, flagTPrior =  object@param$flagTPrior,
                             flagSPrior = object@param$flagSPrior, 
                             weights = NULL, group = NULL, score = TRUE,             # sin Implementar

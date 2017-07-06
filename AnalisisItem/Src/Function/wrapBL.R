@@ -760,21 +760,23 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     nueNUM <- gsub("(.+\\()(\\d+)(\\).+)", paste0("\\1", nueNUM, "\\3"), 
                   auxBlm[linea3])
     auxBlm[linea3] <- nueNUM
-    if (!is.null(datAnclas) & length(isBad) > 0) {
+    if (length(isBad) > 0) {  
       # # Ajustando campo Fix
       cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
       cat("Eliminando items ...... \n")
       cat(isBad, "\n")
-      posFix <- (1:nrow(indPosi))[indPosi[["pos"]] %in% isBad]
-      printFix(vecFix = indPosi$Fix[-posFix], commandFile)
-      cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
-          file = commandFile, append = TRUE)
-      #indPosi$Fix <- indPosi$Fix[-isBad]
-      #readline(prompt="Press [enter] to continue")
-      # # Ajustando archivo PRM
-      indPosi <- writePRM(indPosi, prFile, isBad = isBad)
-    } else {
-      cat(auxBlm, sep = "\n", file = commandFile)  
+      if(!is.null(datAnclas)) {
+        posFix <- (1:nrow(indPosi))[indPosi[["pos"]] %in% isBad]
+        printFix(vecFix = indPosi$Fix[-posFix], commandFile)
+        cat(auxBlm[(linea1 - 1):length(auxBlm)], sep = "\n", 
+            file = commandFile, append = TRUE)
+        #indPosi$Fix <- indPosi$Fix[-isBad]
+        #readline(prompt="Press [enter] to continue")
+        # # Ajustando archivo PRM
+        indPosi <- writePRM(indPosi, prFile, isBad = isBad)
+      } else {
+        cat(auxBlm, sep = "\n", file = commandFile)
+      }      
     }
 
     # # Verificando de nuevo TCT
