@@ -99,7 +99,11 @@ MakeCorrelation <- function(kkBlock, outPathSamPba, verDataIn,
       if (tamMue != 1) {
         isExploratory <- sample(x = rownames(kkBlock), 
                                 size = ceiling(nrow(kkBlock) * tamMue))
-        indSelected   <- ifelse(flagExplo, as.numeric(isExploratory), -as.numeric(isExploratory))
+        if (flagExplo) {
+            indSelected <- as.numeric(isExploratory)
+        } else {
+            indSelected <- -as.numeric(isExploratory)
+        } 
       } else {
         indSelected   <- 1:nrow(kkBlock)
       }
