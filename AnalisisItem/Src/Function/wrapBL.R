@@ -764,7 +764,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
       # # Ajustando campo Fix
       cat(auxBlm[1:linea4], sep = "\n", file = commandFile)  
       cat("Eliminando items ...... \n")
-      cat(isBad, "\n")
+      cat(isBad, "->", paste0(itemIds[isBad],collapse = "-"), "\n")
       if(!is.null(datAnclas)) {
         posFix <- (1:nrow(indPosi))[indPosi[["pos"]] %in% isBad]
         printFix(vecFix = indPosi$Fix[-posFix], commandFile)
@@ -780,7 +780,7 @@ RunBilog <- function (responseMatrix, runName, outPath = "./",
     }
 
     # # Verificando de nuevo TCT
-    if (iiCor == 1) {
+    if (iiCor >= 1) {
       file.remove(scoreFileName)
       system("WinXP-RUNBILOG.bat")
       auxTCT <- ReadBlTCTFile(tctFileName, ".")
