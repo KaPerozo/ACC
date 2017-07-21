@@ -39,7 +39,7 @@ genConfirmatory <- function(dictVarPrueba, corConfBlockX, nObsConfirmatory,
    flagMultiC  <- typeSem == "flagMultiC"
    flagMultiNC <- typeSem == "flagMultiNC"
    flagBiFac   <- typeSem == "flagBiFac"
-   flagCor <- ifelse(flagBiFac | flagMultiC, TRUE, FALSE)
+   flagOrt <- ifelse(flagBiFac | flagMultiC, FALSE, TRUE)
 
    blockStruc         <- dictVarPrueba[, c("idx", "subCon")]           
    if (flagUni) {
@@ -74,7 +74,7 @@ genConfirmatory <- function(dictVarPrueba, corConfBlockX, nObsConfirmatory,
                    sample.cov = corConfBlockX,
                    sample.nobs = nObsConfirmatory,
                    std.lv = TRUE, estimator = "ML",
-                   orthogonal = flagCor & !flagUni))
+                   orthogonal = flagOrt & !flagUni))
 
    labelAux   <- paste0(gsub("flag", "", typeSem), "Gr")
    sumModMult <- parameterEstimates(modBlock)
@@ -233,10 +233,10 @@ createExcelCon <-  function(nameSheet, summary, outGraph, nObsConfirmatory,
                     'Tipo de Análisis')
   kOmissionThreshold <- object@param$kOmissionThreshold
   isOmissDel   <- kOmissionThreshold <= 1 & kOmissionThreshold > 0
-  valores1     <-  data.frame(valor = c(namesPrueba[, 'codigo_prueba'], 
+  valores1     <-  data.frame(valor = c(unique(namesPrueba[, 'codigo_prueba']), 
                                         'Censal',
-                                        ifelse(isOmissDel, 'Sí', 'No'),
-                                        namesPrueba[, 'nItems'], 
+                                        ifelse(unique(isOmissDel), 'Sí', 'No'),
+                                        unique(namesPrueba[, 'nItems']), 
                                         "Polychoric"))
   cabBlock1    <- data.frame(criterios1, valores1)
   addDataFrame(cabBlock1, sheet = get(nameSheet), startRow = 1,
