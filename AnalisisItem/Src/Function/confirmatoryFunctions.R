@@ -246,9 +246,9 @@ createExcelCon <-  function(nameSheet, summary, outGraph, nObsConfirmatory,
   criterios2 <- c('Prueba','n Análisis',
                   'Criterio para tratamiento de omisiones',
                   'Tratamiento de Valores Ausentes', 'Comentario')
-  valores2   <-  data.frame(valor = c(namesPrueba[, 'prueba'],
-                           nObsConfirmatory, kOmissionThreshold,
-                           versionComment, object@param$useCor))
+  valores2   <-  data.frame(valor = c(unique(namesPrueba[, 'prueba']),
+                           unique(nObsConfirmatory), unique(kOmissionThreshold),
+                           unique(versionComment), unique(object@param$useCor)))
   cabBlock2  <- data.frame(criterios2, valores2)
   addDataFrame(cabBlock2, sheet = get(nameSheet), startRow = 1,
                startColumn = 3, row.names = FALSE,
