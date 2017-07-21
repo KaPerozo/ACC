@@ -538,7 +538,7 @@ function (object, dict, multiMarkOmiss = TRUE, verbose = TRUE, eliminatedVars = 
         }
       } else {
         # # check if the categories have an unique type
-        if (length(typeItem) > 1) {
+        if (length(unique(typeItem)) > 1) {
           stop("Type of variable ", nameItem, " is not unique")
         }
 
