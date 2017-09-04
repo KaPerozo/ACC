@@ -215,6 +215,9 @@ function(object, desElim = NULL){
         warning("**WARNING** Al cruzar con el archivo (eliminar duplicados o hay faltantes): ",
              controlAnal$subConInfo[["path"]], "base original --", nrowAnte,
              "-- base final --", nrow(infoCon))
+      if (any(duplicated(infoCon$id))){
+        stop("Error revisar archivo de afirmaciones, existen items codigos de items duplicados")
+      }
     }
 
     # # Fill column Indices
