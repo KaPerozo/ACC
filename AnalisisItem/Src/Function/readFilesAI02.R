@@ -207,7 +207,7 @@ function(object, desElim = NULL){
       #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
       if ("subCon" %in% names(rnColum)) {
         infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "subCon"])
-        infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "subCon"])
+        infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "idSubcon"])
       }
       nrowAnte <- nrow(infoCon)
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
