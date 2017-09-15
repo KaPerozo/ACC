@@ -540,7 +540,7 @@ setMethod("codeAnalysis", "IRT",
                     "chi2", "gl_chi2", "p_val_chi2", "M_prop", "M_mAbility")
         colFix <- colFix[!colFix %in% names(tablaFin)]
         for(col in colFix){
-           tablaFin <- cbind(tablaFin, 'newCol' = "No aplica")
+           tablaFin <- cbind(tablaFin, 'newCol' = NA)
            setnames(tablaFin, 'newCol', col)
         }
 
