@@ -276,7 +276,8 @@ setMethod("codeAnalysis", "IRT",
                             runPath = file.path(outPath, 'corridas'),
                             verbose = TRUE, runProgram = TRUE, nQuadPoints = 40,
                             commentFile = indexData, NPArm = auxNPAR, thrCorr = object@param$thrCorr, 
-                            datAnclas = listResultsAN, flagTPrior =  object@param$flagTPrior,
+                            datAnclas = if(auxCodModel == "00") NULL else listResultsAN,
+                            flagTPrior =  object@param$flagTPrior,
                             flagSPrior = object@param$flagSPrior, 
                             weights = NULL, group = NULL, score = TRUE,             # sin Implementar
                             personEstimation = "EAP", logistic = TRUE,  kD = NULL,  # sin Implementar
@@ -344,7 +345,7 @@ setMethod("codeAnalysis", "IRT",
  
         
         # # Usando promedio de anclaje
-        if (!is.null(object@param$AnclaRdata)) { # Indicadora de Anclas
+        if (!is.null(object@param$AnclaRdata) & auxCodModel != "00") { # Indicadora de Anclas
           meanAbil <- meanAbilParam
           sdAbil   <- sdAbilParam
         } else {
