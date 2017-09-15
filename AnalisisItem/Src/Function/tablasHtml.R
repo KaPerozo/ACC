@@ -223,7 +223,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
   }
 
   if (x[, unique(codMOD)] == "00") {
-    removeCol  <- c(5, 7:9)
+    removeCol  <- c(5, 7:8)
     auxMensaje <- "'<td colspan=\"1\" align=\"center\"> </td>'"
   }
 
@@ -233,7 +233,7 @@ reporteItem <-  function(x, idPrueba, carNR = c("O", "M"), dirBase = getwd()) {
                 "", TRIED, RIGHT, PCT, "", BISERIAL,                                                   # 16 - 21
                 'disc' = ifelse(is.na(disc), "NA", paste0(disc, " (", eedisc, ") ")),                                             # 22
                 'dif'  = ifelse(is.na(dif_NEW), "NA", ifelse(eedif_NEW != "NA", paste0(dif_NEW, " (", eedif_NEW, ") "), dif_NEW)), dir_OP, dir_ICC,                   # 23 - 25
-                'Mult' = ifelse(M_prop == "No aplica", M_prop, paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")")),     # 26
+                'Mult' = paste0("M: ", round(M_prop * 100, 2), "% (",  round(M_mAbility, 3), ")"),     # 26
                 'Omis' = paste0("O: ", round(O_prop * 100, 2), "% (",  round(O_mAbility, 3), ")"),     # 27
                 'Chis' = ifelse(is.na(chi2), "NA", paste0(chi2, "(pval = ", p_val_chi2, ") - gl = ", gl_chi2)),                   # 28
                 FLAGA, FLAGB, FLAGBISE, FLAGCORR, FLAGINFIT, FLAGKEY1, FLAGKEY2, FLAGKEY3, FLAGMEAN,   # 29 - 37
