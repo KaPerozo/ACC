@@ -207,7 +207,7 @@ function(object, desElim = NULL){
       #                     toupper(gsub("(\\.con|pba|PBA)", "", nameCon)), ]
       if ("subCon" %in% names(rnColum)) {
         infoItem[, "etiqu"]   <- gsub("^\\s?(\\d{1}\\..+)", "\\1", infoItem[, "subCon"])
-        infoItem[, "subCon"]  <- gsub("^\\s?((\\d|\\.)+)(\\s+)?(\\w.+)", "AFIRM\\1", infoItem[, "idSubcon"])
+        infoItem[, "subCon"]  <- paste("AFIRM", substr(infoItem[, "idSubcon"], 5, 10))
       }
       nrowAnte <- nrow(infoCon)
       infoCon  <- merge(infoCon, infoItem[, c(names(rnColum), 'etiqu' = 'etiqu')], by = "id", all.x = TRUE)
@@ -236,10 +236,11 @@ function(object, desElim = NULL){
     }
 
     # # Prueba y Codigo_Prueba Column
-    if (object@nomPrueba != ""){
-      infoCon[, "prueba"] = object@nomPrueba
+    if (object@nomTest != ""){
+      
+      infoCon[, "prueba"] = object@nomTest
     } else {
-        if (object@nomPrueba == "" & indNA == 0) {
+        if (object@nomTest == "" & indNA == 0) {
           stop("**ERROR** No se pudo encontrar el nombre de la prueba")
         }
     }
