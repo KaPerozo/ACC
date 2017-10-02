@@ -65,10 +65,11 @@ IRT <- function(test, paramExp = NULL){
                        idNoPKey = c('O', 'M'), constDmodel = 1.7,
                        isCheckKeys = FALSE, kThresItemCorrDic = 0.2,
                        kThresItemCorrOrd = 0.2, espSd = 1, espMean = 0, 
-                       AnclaRdata = NULL, formAncla = "",
+                       AnclaRdata = NULL, formAncla = "", 
                        flagSPrior = FALSE, flagTPrior = FALSE,
                        mCentrar = NULL, sdCentrar = NULL, 
-                       minPun= NULL, maxPun = NULL, thrCorr = 0.05)
+                       minPun= NULL, maxPun = NULL, multiSL = NULL, 
+                       sumaSL = NULL, thrCorr = 0.05)
   if (!is.null(paramExp)) {
     isDefault <- setdiff(names(paramDefault), names(paramExp))
     paramExp  <- c(paramExp, paramDefault[isDefault])
@@ -353,8 +354,13 @@ setMethod("codeAnalysis", "IRT",
           sdAbil   <- sd(personAbilities$ABILITY)         
         }
 
-        # cat(meanAbil)
-        # cat(sdAbil)
+        if (!is.null(object@param$multiSL) & !is.null(object@param$sumaSL)) {
+        	cat(">>>>> Se especifico Multiplica y Suma via Stacking Lord \n")
+        	itemParameters[, "dif"]  <- itemParameters[, "dif"] * object@param$multiSL + object@param$sumaSL
+        	itemParameters[, "disc"] <- itemParameters[, "disc"] / object@param$multiSL
+        	cat("........ Multiplica =", object@param$multiSL, "\n")
+        	cat("........ Suma       =", object@param$sumaSL, "\n")
+        }
 
         # # Transformando dificultad y habilidad
         personAbilities[, "ABILITY_NEW"] <- personAbilities[, "ABILITY"]
