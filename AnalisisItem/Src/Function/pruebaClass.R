@@ -24,21 +24,21 @@
 Test <- setClass("Test", 
  		# # Definir la estructura
  		slots = c(path           = 'character',  # Ruta de la carpeta 
- 			        dictionaryList = 'list',		   # Diccionario de variables
- 			        datBlock       = 'list',  	   # Datos leidos
- 			        exam           = 'character',  # (SABER359, SABER11, SABERPRO)
-              periodo        = 'character',  # (AC20142, EK2015)
-	            verInput       = 'numeric',    # Version con el que se genera diccionarios
-	            nomTest        = 'character',  # Nombre para impresion en los reportes
-	            paramLect      = 'list',       # Parametros de lectura de la prueba
-	            codMod         = 'character',
-              listAnal       = 'list',
-              isUpdate       = 'logical'), # Codigos del modelo de la prueba
+ 			  dictionaryList = 'list',		   # Diccionario de variables
+ 			  datBlock       = 'list',  	   # Datos leidos
+ 			  exam           = 'character',  # (SABER359, SABER11, SABERPRO)
+                          periodo        = 'character',  # (AC20142, EK2015)
+	                  verInput       = 'numeric',    # Version con el que se genera diccionarios
+	                  nomTest        = 'character',  # Nombre para impresion en los reportes
+	                  paramLect      = 'list',       # Parametros de lectura de la prueba
+	                  codMod         = 'character',
+                          listAnal       = 'list',
+                          isUpdate       = 'logical'), # Codigos del modelo de la prueba
 
  		# # Definir los valores por defecto
  		prototype = list(verInput = 1, path = "", exam = "", codMod = "02",
-					  	       nomPrueba = "", paramLect = list(conDirs = ""), 
-                     isUpdate = TRUE), 
+		                 nomPrueba = "", paramLect = list(conDirs = ""), 
+                                 isUpdate = TRUE), 
  		validity  = function(object){ 			 			
       auxModelos <- data.frame('codMod' = c("00", "01", "02", "03", "04", "05", "06", "07"),
                                'model'  = c("noModel", "PCM", "RSM", "GRM", "MRD", "1PL", "2PL", "3PL"))		
@@ -330,6 +330,9 @@ setMethod("filterSubsets", "Analysis",
       }
       object@datAnalysis <- lapply(object@datAnalysis, function(x){
                                    x$datos <- subset(x$datos, x$datos$tipoApli %in% object@param$kApli)
+	                           if (nrow(x$datos) == 0) {
+				     stop("Revisar parametro 'kApli' 0 observaciones para procesar")
+				   }
                                    x$datos <- data.frame(x$datos)
                                    names(x$datos) <- gsub("X(\\d+)", "\\1", names(x$datos))
                                    return(x)})
